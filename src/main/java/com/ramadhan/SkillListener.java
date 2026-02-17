@@ -22,7 +22,7 @@ public class SkillListener implements Listener {
         startPermanentAura(); // Menjalankan aura terus-menerus
     }
 
-    // --- 1. AURA BADAN & SABIT PUNGGUNG (Otomatis & Melengkung) ---
+    // --- 1. AURA BADAN & SABIT PUNGGUNG VERTIKAL (🌙) ---
     private void startPermanentAura() {
         new BukkitRunnable() {
             @Override
@@ -31,11 +31,10 @@ public class SkillListener implements Listener {
                     if (isHolding(p)) {
                         Location loc = p.getLocation();
                         
-                        // Aura Partikel Kuning Kelap-kelip di sekitar kaki & badan
-                        p.getWorld().spawnParticle(Particle.WAX_OFF, loc.clone().add(0, 0.2, 0), 3, 0.3, 0.2, 0.3, 0);
-                        p.getWorld().spawnParticle(Particle.WAX_OFF, loc.clone().add(0, 1.2, 0), 2, 0.2, 0.4, 0.2, 0);
+                        // Aura Kelap-kelip Kuning di Badan
+                        p.getWorld().spawnParticle(Particle.WAX_OFF, loc.clone().add(0, 0.5, 0), 2, 0.3, 0.5, 0.3, 0);
                         
-                        // Gambar Bulan Sabit Melengkung di Punggung
+                        // Gambar Bulan Sabit Berdiri (🌙) di Punggung
                         drawBackCrescent(p);
                     }
                 }
@@ -45,43 +44,44 @@ public class SkillListener implements Listener {
 
     private void drawBackCrescent(Player p) {
         Location loc = p.getLocation();
-        // Vektor ke arah belakang punggung player
-        Vector dir = loc.getDirection().setY(0).normalize().multiply(-0.4); 
-        Location backCenter = loc.clone().add(dir).add(0, 1.2, 0); 
+        // Ambil arah belakang pemain
+        Vector backDir = loc.getDirection().setY(0).normalize().multiply(-1);
+        // Titik pusat di punggung (0.35 blok di belakang badan)
+        Location backCenter = loc.clone().add(backDir.multiply(0.35)).add(0, 1.3, 0);
         
-        // Vektor samping untuk lebar sabit
-        Vector side = new Vector(-dir.getZ(), 0, dir.getX()).normalize();
-        
-        // Perbaikan rumus melengkung (Crescent Shape)
-        for (double i = -0.5; i <= 0.5; i += 0.05) {
-            // Rumus kuadratik agar melengkung ke dalam (mirip huruf C atau bulan sabit)
-            double curve = (Math.pow(i, 2) - 0.25) * 0.9; 
+        // Vektor samping untuk menentukan arah lengkungan sabit (ke arah kanan/kiri)
+        Vector sideDir = new Vector(-backDir.getZ(), 0, backDir.getX()).normalize();
+
+        // Menggambar kurva vertikal
+        for (double i = -0.7; i <= 0.7; i += 0.08) {
+            // i adalah sumbu Y (tinggi). CurveAmount menentukan lengkungan ke samping.
+            // Rumus: (i^2 - max_i^2) * strength
+            double curveAmount = (Math.pow(i, 2) - 0.49) * 0.8; 
             
             Location dot = backCenter.clone()
-                    .add(side.clone().multiply(i))
-                    .add(dir.clone().multiply(curve));
+                    .add(0, i, 0) // Posisi naik-turun (Vertikal)
+                    .add(sideDir.clone().multiply(curveAmount)); // Lengkungan ke samping
             
-            p.getWorld().spawnParticle(Particle.DUST, dot, 1, new Particle.DustOptions(Color.YELLOW, 0.8f));
+            p.getWorld().spawnParticle(Particle.DUST, dot, 1, new Particle.DustOptions(Color.YELLOW, 0.7f));
         }
     }
 
-    // --- 2. ATTACK SLASH & VERTICAL STAB (Kill Execution) ---
+    // --- 2. ATTACK SLASH & VERTICAL STAB (Kill) ---
     @EventHandler
     public void onHit(EntityDamageByEntityEvent e) {
         if (!(e.getDamager() instanceof Player p) || !isHolding(p)) return;
         
         if (e.getEntity() instanceof LivingEntity target) {
-            // Efek Tebasan Horizontal (Slash Sabit Kuning)
+            // Visual Slash Horizontal di badan musuh
             drawHorizontalSlash(target.getLocation().add(0, 1, 0), p.getLocation().getDirection());
             
             target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 1));
             target.getWorld().spawnParticle(Particle.FLASH, target.getLocation().add(0, 1, 0), 1);
 
-            // Efek Kill: Dash + Sabit Raksasa Menusuk Bumi
+            // Dash Kill + Sabit Menusuk (Stab)
             if (target.getHealth() - e.getFinalDamage() <= 0) {
                 drawVerticalStab(target.getLocation());
                 
-                // Dash Teleport
                 Vector dash = target.getLocation().getDirection().multiply(-1.5);
                 p.teleport(target.getLocation().add(dash));
                 
@@ -101,17 +101,15 @@ public class SkillListener implements Listener {
     }
 
     private void drawVerticalStab(Location loc) {
-        // Efek Sabit Melengkung Menusuk ke Tanah dari Atas
         for (double y = 0; y <= 3; y += 0.15) {
             double curve = (Math.pow(y - 1.5, 2) - 2.25) * 0.2; 
             Location dot = loc.clone().add(curve, 3 - y, 0);
             loc.getWorld().spawnParticle(Particle.DUST, dot, 3, new Particle.DustOptions(Color.ORANGE, 2.0f));
-            loc.getWorld().spawnParticle(Particle.WAX_ON, dot, 1, 0, 0, 0, 0);
         }
         loc.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, loc, 1);
     }
 
-    // --- 3. SHIELD ORBIT (Jongkok / Sneak) ---
+    // --- 3. SHIELD ORBIT (Jongkok) ---
     @EventHandler
     public void onSneak(PlayerToggleSneakEvent e) {
         Player p = e.getPlayer();
