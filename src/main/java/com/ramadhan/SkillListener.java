@@ -44,7 +44,7 @@ public class SkillListener implements Listener {
         
         for (double i = -0.7; i <= 0.7; i += 0.05) {
             double curve = (0.49 - Math.pow(i, 2)) * 1.4; 
-            double tiltOffset = i * 0.3; // Efek miring ke kiri
+            double tiltOffset = i * 0.3; 
 
             Location dot = center.clone()
                     .add(0, i + tiltOffset, 0) 
@@ -64,21 +64,18 @@ public class SkillListener implements Listener {
         Player p = e.getPlayer();
         if (!isHolding(p)) return;
         
-        // Cek jika player melakukan klik kiri (ayunan pedang)
         if (e.getAction() == Action.LEFT_CLICK_AIR || e.getAction() == Action.LEFT_CLICK_BLOCK) {
-            // Munculkan tebasan di depan player (2 blok di depan mata)
             Location slashLoc = p.getEyeLocation().add(p.getLocation().getDirection().multiply(2));
             drawHorizontalSlash(slashLoc, p.getLocation().getDirection());
             p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 0.6f, 1.5f);
         }
     }
 
-    // --- 3. ATTACK & DASH KILL (Saat Kena Entity) ---
+    // --- 3. ATTACK & DASH KILL ---
     @EventHandler
     public void onHit(EntityDamageByEntityEvent e) {
         if (!(e.getDamager() instanceof Player p) || !isHolding(p)) return;
         if (e.getEntity() instanceof LivingEntity target) {
-            // Partikel Flash saat kena hit
             target.getWorld().spawnParticle(Particle.FLASH, target.getLocation().add(0, 1, 0), 1);
             target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 1));
 
@@ -95,7 +92,7 @@ public class SkillListener implements Listener {
     private void drawHorizontalSlash(Location loc, Vector dir) {
         Vector side = new Vector(-dir.getZ(), 0, dir.getX()).normalize();
         for (double i = -1; i <= 1; i += 0.1) {
-            double offset = (1 - Math.pow(i, 2)) * 0.6; // Tebasan melengkung
+            double offset = (1 - Math.pow(i, 2)) * 0.6; 
             Location pLoc = loc.clone().add(side.clone().multiply(i)).add(dir.clone().multiply(offset));
             loc.getWorld().spawnParticle(Particle.DUST, pLoc, 1, new Particle.DustOptions(Color.YELLOW, 1.2f));
         }
@@ -160,48 +157,4 @@ public class SkillListener implements Listener {
         var i = p.getInventory().getItemInMainHand();
         return i != null && i.hasItemMeta() && i.getItemMeta().getDisplayName().contains("Golden Crescent Blade");
     }
-}
-                // Berhenti jika lepas shift atau sudah 3 detik (60 ticks)
-                if (!p.isOnline() || !p.isSneaking() || t > 60) {
-                    if (t > 60) { // Efek Finish: Simbol Bulan di Atas
-                        drawCrescentSymbol(p.getLocation().add(0, 2.5, 0));
-                        p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
-                        p.getWorld().spawnParticle(Particle.FLASH, p.getLocation().add(0, 1, 0), 3);
-                    }
-                    this.cancel();
-                    return;
-                }
-
-                // Efek Spiral Mengerucut ke Atas (Recalling Visual)
-                for (int i = 0; i < 2; i++) {
-                    angle += 0.4;
-                    radius -= 0.028; // Mengecilkan lingkaran
-                    height += 0.045; // Menaikkan posisi
-
-                    if (radius < 0.2) radius = 0.2;
-
-                    double x = Math.cos(angle) * radius;
-                    double z = Math.sin(angle) * radius;
-
-                    Location partLoc = p.getLocation().add(x, height, z);
-                    p.getWorld().spawnParticle(Particle.DUST, partLoc, 1, new Particle.DustOptions(Color.ORANGE, 1.3f));
-                    p.getWorld().spawnParticle(Particle.WAX_ON, partLoc, 1, 0, 0, 0, 0);
-                }
-                t++;
-            }
-        }.runTaskTimer(plugin, 0L, 1L); 
-    }
-
-    private void drawCrescentSymbol(Location loc) {
-        // Gambar sabit kecil horizontal sebagai mahkota di akhir recall
-        for (double i = -0.6; i <= 0.6; i += 0.1) {
-            double curve = (0.36 - Math.pow(i, 2)) * 0.7;
-            loc.getWorld().spawnParticle(Particle.DUST, loc.clone().add(i, 0, curve), 5, new Particle.DustOptions(Color.YELLOW, 1.5f));
-        }
-    }
-
-    private boolean isHolding(Player p) {
-        var i = p.getInventory().getItemInMainHand();
-        return i != null && i.hasItemMeta() && i.getItemMeta().getDisplayName().contains("Golden Crescent Blade");
-    }
-}
+} // Kurung tutup terakhir class
