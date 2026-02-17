@@ -14,10 +14,7 @@ import java.util.Arrays;
 
 public class DailyGUI implements Listener {
     private final GoldenMoon plugin;
-
-    public DailyGUI(GoldenMoon plugin) {
-        this.plugin = plugin;
-    }
+    public DailyGUI(GoldenMoon plugin) { this.plugin = plugin; }
 
     public void open(Player p) {
         Inventory inv = Bukkit.createInventory(null, 54, "§8🌙 Rewards Claim");
@@ -27,25 +24,20 @@ public class DailyGUI implements Listener {
         for (int i = 1; i <= 30; i++) {
             ItemStack item;
             String status;
-
             if (i <= claimed) {
-                // SUDAH DIKLAIM (Kaca Hijau)
                 item = new ItemStack(Material.LIME_STAINED_GLASS_PANE);
                 status = "§a✔ Sudah Diklaim";
             } else if (i <= unlocked) {
-                // SIAP DIKLAIM (Gold Block / Chest)
                 item = new ItemStack(i == 30 ? Material.NETHERITE_SWORD : Material.GOLD_BLOCK);
-                status = "§e§lKLIK UNTUK KLAIM!";
+                status = "§e§lSIAP KLAIM!";
             } else {
-                // BELUM TERBUKA (Kaca Merah)
                 item = new ItemStack(Material.RED_STAINED_GLASS_PANE);
-                status = "§c🔒 Terkunci (Login besok)";
+                status = "§c🔒 Belum Terbuka";
             }
-
-            ItemMeta meta = item.getItemMeta();
-            meta.setDisplayName("§fDay §6" + i);
-            meta.setLore(Arrays.asList("", status));
-            item.setItemMeta(meta);
+            ItemMeta m = item.getItemMeta();
+            m.setDisplayName("§6Day " + i);
+            m.setLore(Arrays.asList("", status));
+            item.setItemMeta(m);
             inv.setItem(i - 1, item);
         }
         p.openInventory(inv);
@@ -54,33 +46,28 @@ public class DailyGUI implements Listener {
     @EventHandler
     public void onClick(InventoryClickEvent e) {
         if (!e.getView().getTitle().equals("§8🌙 Rewards Claim")) return;
-        e.setCancelled(true); // Kunci barang biar gak dicolong
+        e.setCancelled(true);
+        if (e.getClickedInventory() != e.getView().getTopInventory()) return;
 
-        if (e.getCurrentItem() == null || !e.getCurrentItem().hasItemMeta()) return;
         Player p = (Player) e.getWhoClicked();
-
-        String name = e.getCurrentItem().getItemMeta().getDisplayName();
-        // Ambil angka dari nama "Day 5" -> 5
-        int day = Integer.parseInt(name.replaceAll("[^0-9]", ""));
+        int day = e.getSlot() + 1;
+        if (day < 1 || day > 30) return;
 
         int unlocked = plugin.getDailyManager().getUnlockedLevel(p.getUniqueId());
         int claimed = plugin.getDailyManager().getClaimedLevel(p.getUniqueId());
 
-        // Logika Validasi Klaim
-        if (day > claimed && day <= unlocked) {
-            // Proses Klaim
-            // Update data dulu biar gak bisa dupe
-            plugin.getDailyManager().setClaimedLevel(p.getUniqueId(), day); 
-            
-            // Kasih barang
-            plugin.getDailyManager().giveReward(p, day);
-            
-            p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 2);
-            p.closeInventory();
-        } else if (day <= claimed) {
-            p.sendMessage("§cKamu sudah mengambil hadiah hari ini!");
+        if (day <= unlocked) {
+            if (day > claimed) {
+                plugin.getDailyManager().setClaimedLevel(p.getUniqueId(), day);
+                plugin.getDailyManager().giveReward(p, day);
+                p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1, 1);
+                p.closeInventory();
+                p.sendMessage("§aBerhasil klaim Day " + day);
+            } else {
+                p.sendMessage("§cSudah diklaim!");
+            }
         } else {
-            p.sendMessage("§cHari ini belum terbuka! Login lagi besok.");
+            p.sendMessage("§cDay " + day + " belum terbuka! Login besok.");
         }
     }
 }
