@@ -5,6 +5,7 @@ import org.bukkit.entity.*;
 import org.bukkit.event.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -15,7 +16,7 @@ import java.util.*;
 
 public class SkillListener implements Listener {
 
-    private final GoldenRamadhan plugin; 
+    private final GoldenMoon plugin; // SEKARANG SAMA DENGAN MAIN CLASS LO
     private final Map<UUID, Integer> hitStack = new HashMap<>();
     private final Map<UUID, Long> lastHitTime = new HashMap<>();
     private final Map<UUID, List<BukkitTask>> activeTasks = new HashMap<>();
@@ -23,7 +24,7 @@ public class SkillListener implements Listener {
     private static final int MAX_STACK = 5;
     private static final long HIT_TIMEOUT = 3000; 
 
-    public SkillListener(GoldenRamadhan plugin) {
+    public SkillListener(GoldenMoon plugin) {
         this.plugin = plugin;
         startComboWatcher();
     }
@@ -178,8 +179,10 @@ public class SkillListener implements Listener {
 
     private boolean isHolding(Player p) {
         ItemStack item = p.getInventory().getItemInMainHand();
-        return item != null && item.hasItemMeta() && 
-               item.getItemMeta().hasDisplayName() && 
-               item.getItemMeta().getDisplayName().contains("Golden Crescent Blade");
+        if (item == null || item.getType() == Material.AIR) return false;
+        if (!item.hasItemMeta()) return false;
+        if (!item.getItemMeta().hasDisplayName()) return false;
+        
+        return item.getItemMeta().getDisplayName().contains("Golden Crescent Blade");
     }
 }
