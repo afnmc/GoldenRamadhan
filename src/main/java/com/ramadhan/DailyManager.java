@@ -25,52 +25,95 @@ public class DailyManager implements Listener {
     public DailyManager(GoldenMoon plugin) {
         this.plugin = plugin;
         this.dataFile = new File(plugin.getDataFolder(), "userdata.yml");
-        if (!dataFile.exists()) { plugin.getDataFolder().mkdirs(); try { dataFile.createNewFile(); } catch (IOException ignored) {} }
-        dataConfig = YamlConfiguration.loadConfiguration(dataFile);
+        if (!dataFile.exists()) {
+            plugin.getDataFolder().mkdirs();
+            try { dataFile.createNewFile(); } catch (IOException e) { e.printStackTrace(); }
+        }
+        this.dataConfig = YamlConfiguration.loadConfiguration(dataFile);
     }
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player p = event.getPlayer();
         UUID id = p.getUniqueId();
-        
+
+        // Logika Waktu (Abidjan ke WIB)
         ZonedDateTime nowAbidjan = ZonedDateTime.now(ZoneId.of("UTC"));
-        int resetHourWib = plugin.getConfig().getInt("daily-reset-hour-wib");
+        int resetHourWib = plugin.getConfig().getInt("daily-reset-hour-wib", 6);
         LocalDate logicalDate = nowAbidjan.plusHours(7 - resetHourWib).toLocalDate();
 
-        String last = dataConfig.getString(id + ".last");
-        int prog = dataConfig.getInt(id + ".prog", 0);
+        String lastLoginDate = dataConfig.getString(id + ".last_login_date");
+        int unlockedDay = dataConfig.getInt(id + ".unlocked", 0);
 
-        if (last == null || !last.equals(logicalDate.toString())) {
-            int next = prog + 1;
-            if (next <= 30) {
-                dataConfig.set(id + ".prog", next);
-                dataConfig.set(id + ".last", logicalDate.toString());
+        // Jika hari baru, buka kunci level selanjutnya
+        if (lastLoginDate == null || !lastLoginDate.equals(logicalDate.toString())) {
+            int nextDay = unlockedDay + 1;
+            if (nextDay <= 30) {
+                dataConfig.set(id + ".unlocked", nextDay);
+                dataConfig.set(id + ".last_login_date", logicalDate.toString());
                 saveData();
-                giveReward(p, next);
+
+                p.sendMessage("§6§l🌙 RAMADHAN EVENT");
+                p.sendMessage("§eDay " + nextDay + " §ftelah terbuka!");
+                p.sendMessage("§fKetik §b/gm daily §funtuk mengambil hadiahmu.");
             }
         }
     }
 
+    // Ambil level yang sudah DIKLAIM
+    public int getClaimedLevel(UUID uuid) {
+        return dataConfig.getInt(uuid + ".claimed", 0);
+    }
+
+    // Set level klaim
+    public void setClaimedLevel(UUID uuid, int level) {
+        dataConfig.set(uuid + ".claimed", level);
+        saveData();
+    }
+
+    // Ambil level yang TERBUKA (Unlocked)
+    public int getUnlockedLevel(UUID uuid) {
+        return dataConfig.getInt(uuid + ".unlocked", 0);
+    }
+
+    // Fungsi beri hadiah (Dipanggil dari GUI)
     public void giveReward(Player p, int day) {
-        p.sendMessage(plugin.getMsg("daily-claimed").replace("%day%", String.valueOf(day)));
+        ItemStack reward;
         if (day == 30) {
-            p.getInventory().addItem(getSpecialBlade());
-            p.sendMessage(plugin.getMsg("limited-item-received"));
+            reward = getSpecialBlade();
+            p.sendMessage("§b§l[!] AMAZING! §fKamu mendapatkan §6Golden Crescent Blade!");
         } else {
-            p.getInventory().addItem(new ItemStack(Material.GOLD_INGOT, 3));
+            // Hadiah biasa: 3 Gold Ingot
+            reward = new ItemStack(Material.GOLD_INGOT, 3);
+            p.sendMessage("§a[Daily] §fKamu menerima hadiah §eDay " + day);
+        }
+
+        // Cek inventory penuh
+        if (p.getInventory().firstEmpty() != -1) {
+            p.getInventory().addItem(reward);
+        } else {
+            p.getWorld().dropItem(p.getLocation(), reward);
+            p.sendMessage("§cInventory penuh! Barang dijatuhkan di kaki.");
         }
     }
 
     public ItemStack getSpecialBlade() {
         ItemStack s = new ItemStack(Material.NETHERITE_SWORD);
         ItemMeta m = s.getItemMeta();
-        m.setDisplayName("§6§lGolden Crescent Blade");
-        m.setLore(Arrays.asList("§7Limited Edition - 2026", "§eSkill: §6Lunar Sweep (Hit)", "§eSkill: §6Lunar Shield (Shift)"));
-        s.setItemMeta(m);
+        if (m != null) {
+            m.setDisplayName("§6§lGolden Crescent Blade");
+            m.setLore(Arrays.asList(
+                "§7Limited Edition - Ramadhan 2026",
+                "§eSkill: §6Lunar Sweep (Hit)",
+                "§eSkill: §6Lunar Shield (Shift)"
+            ));
+            m.setUnbreakable(true);
+            s.setItemMeta(m);
+        }
         return s;
     }
 
-    public int getPlayerProgress(UUID uuid) { return dataConfig.getInt(uuid + ".prog", 0); }
-    private void saveData() { try { dataConfig.save(dataFile); } catch (IOException ignored) {} }
+    private void saveData() {
+        try { dataConfig.save(dataFile); } catch (IOException e) { e.printStackTrace(); }
+    }
 }
