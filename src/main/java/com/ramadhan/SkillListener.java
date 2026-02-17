@@ -9,12 +9,13 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.Vector;
 
 import java.util.*;
 
 public class SkillListener implements Listener {
 
-    private final GoldenMoon plugin; // Pakai referensi main class lama lo
+    private final GoldenRamadhan plugin; 
     private final Map<UUID, Integer> hitStack = new HashMap<>();
     private final Map<UUID, Long> lastHitTime = new HashMap<>();
     private final Map<UUID, List<BukkitTask>> activeTasks = new HashMap<>();
@@ -22,7 +23,7 @@ public class SkillListener implements Listener {
     private static final int MAX_STACK = 5;
     private static final long HIT_TIMEOUT = 3000; 
 
-    public SkillListener(GoldenMoon plugin) {
+    public SkillListener(GoldenRamadhan plugin) {
         this.plugin = plugin;
         startComboWatcher();
     }
@@ -31,13 +32,12 @@ public class SkillListener implements Listener {
     @EventHandler
     public void onHit(EntityDamageByEntityEvent e) {
         if (!(e.getDamager() instanceof Player p)) return;
-        if (!isHolding(p)) return; // Cek pedang sabit lo
+        if (!isHolding(p)) return; 
         if (!(e.getEntity() instanceof LivingEntity target)) return;
 
         UUID id = p.getUniqueId();
         long now = System.currentTimeMillis();
 
-        // Reset kalau kelamaan gak hit
         if (lastHitTime.containsKey(id) && (now - lastHitTime.get(id) > HIT_TIMEOUT)) {
             reset(p);
         }
@@ -49,12 +49,11 @@ public class SkillListener implements Listener {
         hitStack.put(id, stack);
         lastHitTime.put(id, now);
 
-        // Sound naik pitch tiap hit
         p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_CHIME, 0.5f, 0.5f + (stack * 0.2f));
-        spawnCrescent(p, stack);
+        spawnOrbitCrescent(p, stack);
     }
 
-    // --- 2. SNEAK UNTUK MELEDAKKAN COMBO ---
+    // --- 2. SNEAK UNTUK FINISHER (MENGGUNAKAN LOGIKA SABIT MIRING) ---
     @EventHandler
     public void onSneak(PlayerToggleSneakEvent e) {
         if (!e.isSneaking()) return;
@@ -65,12 +64,12 @@ public class SkillListener implements Listener {
         UUID id = p.getUniqueId();
         if (hitStack.getOrDefault(id, 0) < MAX_STACK) return;
 
-        finisher(p);
+        executeFinisher(p);
         reset(p);
     }
 
-    // --- 3. VISUAL SABIT MUTER (Orbit) ---
-    private void spawnCrescent(Player p, int stack) {
+    // --- 3. VISUAL SABIT MUTER (ORBIT) ---
+    private void spawnOrbitCrescent(Player p, int stack) {
         UUID id = p.getUniqueId();
         
         BukkitTask task = new BukkitRunnable() {
@@ -83,7 +82,7 @@ public class SkillListener implements Listener {
                     return;
                 }
 
-                angle += 10; // Kecepatan putar
+                angle += 10; 
                 double rad = Math.toRadians(angle);
                 double radius = 0.7; 
 
@@ -92,7 +91,6 @@ public class SkillListener implements Listener {
                 double z = Math.sin(rad) * radius;
                 loc.add(x, 0, z);
 
-                // Partikel soul fire biar serem
                 p.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, loc, 1, 0, 0, 0, 0);
             }
         }.runTaskTimer(plugin, 0, 2);
@@ -100,8 +98,96 @@ public class SkillListener implements Listener {
         activeTasks.computeIfAbsent(id, k -> new ArrayList<>()).add(task);
     }
 
-    // --- 4. FINISHER AOE ---
-    private void finisher(Player p) {
+    // --- 4. FINISHER (DENGAN VISUAL SABIT MIRING DI ATAS KEPALA) ---
+    private void executeFinisher(Player p) {
+        World w = p.getWorld();
+        Location center = p.getLocation().add(0, 1, 0);
+        double radius = 5.0;
+
+        List<Entity> targets = p.getNearbyEntities(radius, radius, radius);
+
+        // Visual Ledakan Sabit Miring di Atas
+        drawSpecialCrescent(p.getLocation().add(0, 2.5, 0), p);
+
+        new BukkitRunnable() {
+            double t = 0;
+            @Override
+            public void run() {
+                t += 0.3;
+                for (double a = 0; a < Math.PI * 2; a += Math.PI / 10) {
+                    double x = Math.cos(a) * t;
+                    double z = Math.sin(a) * t;
+                    w.spawnParticle(Particle.END_ROD, center.clone().add(x, 0, z), 1, 0, 0, 0, 0);
+                }
+
+                if (t >= 3.0) {
+                    w.spawnParticle(Particle.EXPLOSION_EMITTER, center, 1);
+                    w.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 1.0f, 0.7f);
+
+                    for (Entity e : targets) {
+                        if (e instanceof LivingEntity le && le != p) {
+                            le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 60, 10));
+                            le.damage(40.0, p);
+                        }
+                    }
+                    this.cancel();
+                }
+            }
+        }.runTaskTimer(plugin, 0, 2);
+    }
+
+    // RUMUS SABIT MIRING & LENGKUNG (Sesuai Diagram)
+    private void drawSpecialCrescent(Location center, Player p) {
+        Vector dir = p.getLocation().getDirection().setY(0).normalize();
+        Vector rightDir = new Vector(-dir.getZ(), 0, dir.getX()).normalize();
+
+        for (double t = -1.3; t <= 1.3; t += 0.05) {
+            double curveWidth = Math.cos(t) * 1.5; 
+            double height = t * 1.3; 
+            
+            // Rotasi 20 derajat (0.35 rad)
+            double tiltedX = (curveWidth * Math.cos(0.35)) - (height * Math.sin(0.35));
+            double tiltedY = (curveWidth * Math.sin(0.35)) + (height * Math.cos(0.35));
+
+            Location dot = center.clone().add(rightDir.clone().multiply(tiltedX)).add(0, tiltedY, 0);
+            p.getWorld().spawnParticle(Particle.DUST, dot, 1, new Particle.DustOptions(Color.fromRGB(255, 215, 0), 1.5f));
+        }
+    }
+
+    private void reset(Player p) {
+        UUID id = p.getUniqueId();
+        hitStack.remove(id);
+        lastHitTime.remove(id);
+        if (activeTasks.containsKey(id)) {
+            activeTasks.get(id).forEach(BukkitTask::cancel);
+            activeTasks.remove(id);
+        }
+    }
+
+    private void startComboWatcher() {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                long now = System.currentTimeMillis();
+                for (UUID id : new HashSet<>(lastHitTime.keySet())) {
+                    if (now - lastHitTime.get(id) > HIT_TIMEOUT) {
+                        Player p = Bukkit.getPlayer(id);
+                        if (p != null) reset(p);
+                        else {
+                            hitStack.remove(id);
+                            lastHitTime.remove(id);
+                        }
+                    }
+                }
+            }
+        }.runTaskTimer(plugin, 20, 20);
+    }
+
+    private boolean isHolding(Player p) {
+        var i = p.getInventory().getItemInMainHand();
+        return i != null && i.hasItemMeta() && i.getItemMeta().getDisplayName().contains("Golden Crescent Blade");
+    }
+}
         World w = p.getWorld();
         Location center = p.getLocation().add(0, 1, 0);
         double radius = 5.0;
