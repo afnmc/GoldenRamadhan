@@ -2,9 +2,6 @@ name: GoldenRamadhan
 version: 1.0
 main: com.ramadhan.GoldenMoon
 api-version: '1.21'
-author: Afn_mc
-
 commands:
-  ramadhan:
-    description: Main admin command for Golden Ramadhan
-    usage: /ramadhan getsword
+  goldenmoon:
+    aliases: [gm]
