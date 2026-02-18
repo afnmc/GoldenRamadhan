@@ -5,4 +5,9 @@ api-version: '1.21'
 commands:
   goldenmoon:
     aliases: [gm]
-    description: Command utama GoldenMoon (Daily/Admin)
+    description: Menu Daily dan Command Admin.
+
+permissions:
+  goldenmoon.admin:
+    description: Izin khusus untuk mengambil pedang via command.
+    default: op
