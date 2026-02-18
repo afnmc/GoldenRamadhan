@@ -33,11 +33,7 @@ public class SkillListener implements Listener {
                 for (Player p : Bukkit.getOnlinePlayers()) {
                     if (!isHolding(p)) continue;
                     int stack = comboStack.getOrDefault(p.getUniqueId(), 0);
-                    
-                    // Sabit Punggung: Jadi Putih Terang kalau Stack 5
                     drawBackMoon(p, rot, stack);
-                    
-                    // Partikel samping badan pas nyicil stack
                     if (stack > 0 && stack < 5) drawSideStack(p, stack);
                 }
             }
@@ -47,8 +43,6 @@ public class SkillListener implements Listener {
     private void drawBackMoon(Player p, double rot, int stack) {
         Location loc = p.getLocation().add(0, 1.2, 0).add(p.getLocation().getDirection().setY(0).normalize().multiply(-0.5));
         Vector right = new Vector(-p.getLocation().getDirection().getZ(), 0, p.getLocation().getDirection().getX()).normalize();
-        
-        // Stack 5 = Putih, <5 = Kuning (Build Lama)
         Color col = (stack >= 5) ? Color.WHITE : Color.fromRGB(255, 215, 0);
 
         for (double t = -1.6; t <= 1.6; t += 0.1) {
@@ -56,9 +50,7 @@ public class SkillListener implements Listener {
             double rx = (Math.cos(t) * taper * Math.cos(rot)) - (Math.sin(t) * Math.sin(rot));
             double ry = (Math.cos(t) * taper * Math.sin(rot)) + (Math.sin(t) * Math.cos(rot));
             Location pLoc = loc.clone().add(right.clone().multiply(rx)).add(0, ry, 0);
-            
-            p.getWorld().spawnParticle(Particle.DUST, pLoc, 1, 0, 0, 0, 0, new Particle.DustOptions(col, 0.8f));
-            if (stack >= 5) p.getWorld().spawnParticle(Particle.END_ROD, pLoc, 1, 0, 0, 0, 0);
+            p.getWorld().spawnParticle(Particle.DUST, pLoc, 1, 0, 0, 0, 0, new Particle.DustOptions(col, 0.7f));
         }
     }
 
@@ -76,15 +68,7 @@ public class SkillListener implements Listener {
         if (!(e.getDamager() instanceof Player p) || !isHolding(p)) return;
         if (!(e.getEntity() instanceof LivingEntity target)) return;
 
-        // Dash Attack
-        p.setVelocity(p.getLocation().getDirection().multiply(0.25).setY(0.1));
-
-        // Air Attack
-        if (!p.isOnGround()) {
-            target.getWorld().spawnParticle(Particle.CLOUD, target.getLocation().add(0, 1, 0), 5, 0, 0, 0, 0);
-            p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1f, 1.5f);
-        }
-
+        p.setVelocity(p.getLocation().getDirection().multiply(0.2).setY(0.1));
         drawEpicSlash(target.getLocation());
         
         int stack = Math.min(comboStack.getOrDefault(p.getUniqueId(), 0) + 1, 5);
@@ -94,6 +78,34 @@ public class SkillListener implements Listener {
             p.sendTitle("", "§f§l● LUNAR READY ●", 0, 10, 5);
             p.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 2f);
         }
+
+        // TP KILL: Balik lagi dengan visual nusuk atas-bawah
+        if (target.getHealth() <= e.getFinalDamage()) {
+            p.teleport(target.getLocation());
+            executeTPKillEffect(target.getLocation());
+        }
+    }
+
+    private void executeTPKillEffect(Location loc) {
+        new BukkitRunnable() {
+            double y = 6.0;
+            @Override
+            public void run() {
+                // Partikel nusuk kuning dari atas
+                loc.getWorld().spawnParticle(Particle.DUST, loc.clone().add(0, y, 0), 5, 0.1, 0.1, 0.1, 0, new Particle.DustOptions(Color.YELLOW, 1.5f));
+                loc.getWorld().spawnParticle(Particle.END_ROD, loc.clone().add(0, y, 0), 1, 0, 0, 0, 0);
+                
+                y -= 0.5;
+                if (y <= 0) {
+                    // Ledakan putih di bawah
+                    loc.getWorld().spawnParticle(Particle.FLASH, loc, 1, 0, 0, 0, 0);
+                    loc.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, loc, 1, 0, 0, 0, 0);
+                    loc.getWorld().spawnParticle(Particle.SNOWFLAKE, loc, 10, 0.5, 0.5, 0.5, 0.1);
+                    loc.getWorld().playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 1f, 1.5f);
+                    this.cancel();
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 1L);
     }
 
     private void drawEpicSlash(Location loc) {
@@ -115,7 +127,6 @@ public class SkillListener implements Listener {
             long now = System.currentTimeMillis();
             if (recallCooldown.getOrDefault(p.getUniqueId(), 0L) > now) return;
             recallCooldown.put(p.getUniqueId(), now + 10000); 
-            
             drawSpiralRecall(p);
             p.addPotionEffect(new PotionEffect(PotionEffectType.INSTANT_HEALTH, 1, 0));
             p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 1f);
@@ -127,21 +138,19 @@ public class SkillListener implements Listener {
         
         for (Entity en : p.getNearbyEntities(7, 7, 7)) {
             if (en instanceof LivingEntity le && en != p) {
-                // Efek Serbu Sabit Melingkar ke Mob
                 new BukkitRunnable() {
                     int t = 0;
                     @Override
                     public void run() {
                         double angle = t * 0.6;
-                        // Sabit model tidur melingkar
                         Location circle = le.getLocation().add(Math.cos(angle)*1.5, 0.5, Math.sin(angle)*1.5);
                         le.getWorld().spawnParticle(Particle.DUST, circle, 5, 0, 0, 0, 0, new Particle.DustOptions(Color.WHITE, 1.2f));
-                        le.getWorld().spawnParticle(Particle.END_ROD, circle, 1, 0, 0, 0, 0);
                         
-                        if (t >= 10) { // Menyatukan (Nusuk) dan Meledak
+                        if (t >= 10) {
+                            // Ledakan Sabit Putih (Ulti)
                             le.getWorld().spawnParticle(Particle.SONIC_BOOM, le.getLocation(), 1, 0, 0, 0, 0);
-                            le.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, le.getLocation(), 1, 0, 0, 0, 0);
-                            le.damage(16, p);
+                            le.getWorld().spawnParticle(Particle.FLASH, le.getLocation(), 2, 0.2, 0.2, 0.2, 0);
+                            le.damage(17, p);
                             le.setVelocity(new Vector(0, 0.6, 0));
                             this.cancel();
                         }
@@ -169,6 +178,7 @@ public class SkillListener implements Listener {
 
     private boolean isHolding(Player p) {
         ItemStack i = p.getInventory().getItemInMainHand();
+        // Cek data lunar, bukan cek nama
         return i != null && i.hasItemMeta() && i.getItemMeta().getPersistentDataContainer().has(GoldenMoon.SWORD_KEY, PersistentDataType.BYTE);
     }
 }
