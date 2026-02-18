@@ -73,7 +73,6 @@ public class SkillListener implements Listener {
         if (!(e.getDamager() instanceof Player p) || !isHolding(p)) return;
         if (!(e.getEntity() instanceof LivingEntity target)) return;
 
-        // EFEK TEBASAN ANGIN & RANDOM SLASH
         drawEpicSlash(target.getLocation());
         
         int stack = Math.min(comboStack.getOrDefault(p.getUniqueId(), 0) + 1, 5);
@@ -91,20 +90,15 @@ public class SkillListener implements Listener {
     }
 
     private void drawEpicSlash(Location loc) {
-        boolean side = rand.nextBoolean(); // Mode Random Kiri/Kanan
-        // Tebasan diagonal miring (Rame sesuai gambar)
+        boolean side = rand.nextBoolean();
         for (double i = -1.3; i <= 1.3; i += 0.15) {
             double yOff = side ? i * 0.8 : -i * 0.8; 
             Location pLoc = loc.clone().add(i, yOff + 1.3, 0);
-            
-            // Partikel Kuning Putih
             loc.getWorld().spawnParticle(Particle.DUST, pLoc, 5, new Particle.DustOptions(Color.fromRGB(255, 255, 210), 1.2f));
-            // Partikel Angin (Wind Effect)
             if (rand.nextInt(2) == 0) {
                 loc.getWorld().spawnParticle(Particle.CLOUD, pLoc, 1, 0.05, 0.05, 0.05, 0.01);
             }
         }
-        // Efek angin potong (Sweep)
         loc.getWorld().spawnParticle(Particle.SWEEP_ATTACK, loc.clone().add(0, 1, 0), 1);
     }
 
@@ -125,64 +119,6 @@ public class SkillListener implements Listener {
 
         if (stack >= 5) {
             comboStack.put(p.getUniqueId(), 0);
-            p.getWorld().spawnParticle(Particle.FLASH, p.getLocation(), 10);
-            p.getWorld().spawnParticle(Particle.SONIC_BOOM, p.getLocation().add(p.getLocation().getDirection().multiply(2)), 3);
-            p.playSound(p.getLocation(), Sound.ENTITY_WARDEN_SONIC_BOOM, 1f, 1f);
-            
-            for (Entity en : p.getNearbyEntities(8, 8, 8)) {
-                if (en instanceof LivingEntity le && en != p) {
-                    le.damage(25, p);
-                    le.setVelocity(p.getLocation().getDirection().multiply(2.5).setY(0.5));
-                }
-            }
-        } else {
-            drawSpiralRecall(p);
-            p.addPotionEffect(new PotionEffect(PotionEffectType.INSTANT_HEALTH, 1, 1));
-            p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 100, 3));
-        }
-    }
-
-    private void drawSpiralRecall(Player p) {
-        new BukkitRunnable() {
-            double y = 0;
-            @Override
-            public void run() {
-                for (int i = 0; i < 4; i++) {
-                    double angle = (y * 8) + (i * Math.PI * 0.5);
-                    double x = Math.cos(angle) * 0.9;
-                    double z = Math.sin(angle) * 0.9;
-                    p.getWorld().spawnParticle(Particle.DUST, p.getLocation().add(x, y, z), 2, new Particle.DustOptions(Color.YELLOW, 1f));
-                }
-                y += 0.2;
-                if (y > 3) this.cancel();
-            }
-        }.runTaskTimer(plugin, 0L, 1L);
-    }
-
-    private boolean isHolding(Player p) {
-        ItemStack i = p.getInventory().getItemInMainHand();
-        return i != null && i.hasItemMeta() && i.getItemMeta().getPersistentDataContainer().has(GoldenMoon.SWORD_KEY, PersistentDataType.BYTE);
-    }
-}
-
-    private void drawThunderFall(Location loc) {
-        for (double y = 0; y <= 10; y += 0.5) {
-            loc.getWorld().spawnParticle(Particle.DUST, loc.clone().add(0, y, 0), 10, new Particle.DustOptions(Color.YELLOW, 2f));
-            loc.getWorld().spawnParticle(Particle.END_ROD, loc.clone().add(0, y, 0), 2, 0, 0, 0, 0.1);
-        }
-        loc.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, loc, 2);
-        loc.getWorld().spawnParticle(Particle.FLASH, loc, 5);
-    }
-
-    @EventHandler
-    public void onSneak(PlayerToggleSneakEvent e) {
-        Player p = e.getPlayer();
-        if (!isHolding(p) || !e.isSneaking()) return;
-        int stack = comboStack.getOrDefault(p.getUniqueId(), 0);
-
-        if (stack >= 5) {
-            comboStack.put(p.getUniqueId(), 0);
-            // BURST MEWAH
             p.getWorld().spawnParticle(Particle.FLASH, p.getLocation(), 10);
             p.getWorld().spawnParticle(Particle.SONIC_BOOM, p.getLocation().add(p.getLocation().getDirection().multiply(2)), 3);
             p.playSound(p.getLocation(), Sound.ENTITY_WARDEN_SONIC_BOOM, 1f, 1f);
