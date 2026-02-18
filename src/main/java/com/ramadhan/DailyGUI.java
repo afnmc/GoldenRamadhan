@@ -22,66 +22,66 @@ public class DailyGUI implements Listener {
 
     public void openInventory(Player p) {
         Inventory inv = Bukkit.createInventory(null, 54, "§0Daily Rewards Ramadhan");
+        int today = plugin.getDailyManager().getAbidjanDate();
 
-        // Bikin Border/Background Kaca Hitam
-        ItemStack filler = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
-        ItemMeta fMeta = filler.getItemMeta();
-        fMeta.setDisplayName(" ");
-        filler.setItemMeta(fMeta);
-        for (int i = 0; i < 54; i++) inv.setItem(i, filler);
+        // Border Kaca Hitam
+        ItemStack glass = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
+        ItemMeta gMeta = glass.getItemMeta(); gMeta.setDisplayName(" "); glass.setItemMeta(gMeta);
+        for (int i = 0; i < 54; i++) inv.setItem(i, glass);
 
-        // Map 30 Hari ke Slot Tengah agar rapi (10-43)
-        int dayCounter = 1;
+        // Mapping 30 Hari (Slot 10-43, skip pinggiran)
+        int day = 1;
         for (int slot = 10; slot <= 43; slot++) {
-            // Melewatkan kolom paling kiri dan kanan (slot 17, 18, 26, 27, dst)
             if (slot % 9 == 0 || slot % 9 == 8) continue;
-            if (dayCounter > 30) break;
+            if (day > 30) break;
 
-            ItemStack dayItem = new ItemStack(Material.PAPER);
-            ItemMeta dMeta = dayItem.getItemMeta();
-            dMeta.setDisplayName("§e§lHARI KE-" + dayCounter);
-            
-            List<String> lore = new ArrayList<>();
-            lore.add("§7Klik untuk mengklaim hadiah harian.");
-            lore.add("");
-            lore.add("§a▶ Klik untuk Ambil!");
-            dMeta.setLore(lore);
-            dayItem.setItemMeta(dMeta);
+            ItemStack item;
+            ItemMeta meta;
 
-            inv.setItem(slot, dayItem);
-            dayCounter++;
+            if (today > 30) {
+                item = new ItemStack(Material.BARRIER);
+                meta = item.getItemMeta();
+                meta.setDisplayName("§c§lEVENT SELESAI");
+                meta.setLore(Collections.singletonList("§7Sampai jumpa tahun depan!"));
+            } else {
+                item = new ItemStack(Material.PAPER);
+                meta = item.getItemMeta();
+                meta.setDisplayName("§e§lHARI KE-" + day);
+                List<String> lore = new ArrayList<>();
+                if (day < today) lore.add("§c§oSudah Lewat");
+                else if (day == today) {
+                    lore.add("§a§lBISA DIKLAIM");
+                    lore.add("§7Reset: 06:00 WIB");
+                } else lore.add("§8Belum Terbuka");
+                meta.setLore(lore);
+            }
+            item.setItemMeta(meta);
+            inv.setItem(slot, item);
+            day++;
         }
-
         p.openInventory(inv);
     }
 
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent e) {
+    public void onClick(InventoryClickEvent e) {
         if (!e.getView().getTitle().equals("§0Daily Rewards Ramadhan")) return;
         e.setCancelled(true);
 
+        Player p = (Player) e.getWhoClicked();
         if (e.getCurrentItem() == null || e.getCurrentItem().getType() != Material.PAPER) return;
 
-        Player p = (Player) e.getWhoClicked();
-        
-        // Logic Hadiah Gacha Random
-        giveRandomReward(p);
-        p.closeInventory();
-        p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.2f);
-    }
-
-    private void giveRandomReward(Player p) {
-        List<ItemStack> pool = new ArrayList<>();
-        pool.add(new ItemStack(Material.DIAMOND, 2));
-        pool.add(new ItemStack(Material.GOLD_INGOT, 8));
-        pool.add(new ItemStack(Material.EMERALD, 4));
-        pool.add(new ItemStack(Material.NETHERITE_SCRAP, 1));
-        pool.add(new ItemStack(Material.ENCHANTED_GOLDEN_APPLE, 1));
-        pool.add(new ItemStack(Material.EXPERIENCE_BOTTLE, 16));
-        pool.add(new ItemStack(Material.TOTEM_OF_UNDYING, 1));
-
-        ItemStack win = pool.get(random.nextInt(pool.size()));
-        p.getInventory().addItem(win);
-        p.sendMessage("§6§lDaily §7» §fSelamat! Kamu mendapatkan §e" + win.getAmount() + "x " + win.getType().name());
+        DailyManager dm = plugin.getDailyManager();
+        if (dm.canClaim(p)) {
+            dm.setClaimed(p);
+            // Gacha Hadiah
+            Material[] rewards = {Material.DIAMOND, Material.GOLD_INGOT, Material.NETHERITE_SCRAP, Material.EMERALD};
+            p.getInventory().addItem(new ItemStack(rewards[random.nextInt(rewards.length)], 2));
+            
+            p.sendMessage("§6§lDaily §7» §aBerhasil klaim hadiah!");
+            p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+            p.closeInventory();
+        } else {
+            p.sendMessage("§c[!] Kamu sudah klaim hari ini atau event berakhir.");
+        }
     }
 }
