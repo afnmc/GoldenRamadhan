@@ -21,20 +21,17 @@ public class DailyManager {
     }
 
     public int getRelativeDay() {
-        // Ambil waktu sekarang di Abidjan
         Calendar nowCal = Calendar.getInstance(TimeZone.getTimeZone("Africa/Abidjan"));
         long now = nowCal.getTimeInMillis();
         
         long diff = now - START_TIME_MILLIS;
-        if (diff < 0) return 0; // Belum mulai
+        if (diff < 0) return 0; 
         
-        // Hitung selisih hari
         return (int) TimeUnit.MILLISECONDS.toDays(diff) + 1;
     }
 
     public boolean canClaim(Player p) {
         int currentDay = getRelativeDay();
-        // End di Day 31
         if (currentDay > 30 || currentDay < 1) return false;
         
         int lastClaimed = plugin.getConfig().getInt("players." + p.getUniqueId() + ".last-day", 0);
@@ -54,12 +51,20 @@ public class DailyManager {
             m.setLore(Arrays.asList(
                 "§7Senjata suci titisan rembulan.",
                 "",
-                "§e§lSKILL:",
-                "§f- Lunar Burst (Shift + Atom Mode)",
-                "§f- Spiral Recall (Heal & Resist)",
-                "§f- Thunder Slash (TP Kill)"
+                "§e§lSPECIAL ABILITY:",
+                "§f- §6Dash Strike: §7Maju saat menyerang",
+                "§f- §bLunar Pierce: §7Shift (Full Stack) untuk menusuk",
+                "§f- §aRejuvenate: §7Shift (CD 10s) untuk Heal",
+                "",
+                "§8§oItem ini tidak bisa hancur & di-rename"
             ));
+
+            // FITUR ANTI-ANCUR (Unbreakable)
+            m.setUnbreakable(true);
+
+            // NBT Key untuk Skill & Guard
             m.getPersistentDataContainer().set(GoldenMoon.SWORD_KEY, PersistentDataType.BYTE, (byte)1);
+            
             s.setItemMeta(m);
         }
         return s;
