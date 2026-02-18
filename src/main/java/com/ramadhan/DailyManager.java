@@ -7,8 +7,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
@@ -37,9 +39,10 @@ public class DailyManager implements Listener {
         Player p = event.getPlayer();
         UUID id = p.getUniqueId();
         
-        ZonedDateTime nowAbidjan = ZonedDateTime.now(ZoneId.of("UTC"));
+        // Reset Logic (WIB Offset)
+        ZonedDateTime nowUTC = ZonedDateTime.now(ZoneId.of("UTC"));
         int offset = plugin.getConfig().getInt("daily-reset-hour-wib", 6);
-        LocalDate logicalDate = nowAbidjan.plusHours(7 - offset).toLocalDate();
+        LocalDate logicalDate = nowUTC.plusHours(7 - offset).toLocalDate();
 
         String last = dataConfig.getString(id + ".last_login");
         int unlocked = dataConfig.getInt(id + ".unlocked", 0);
@@ -49,7 +52,7 @@ public class DailyManager implements Listener {
                 dataConfig.set(id + ".unlocked", unlocked + 1);
                 dataConfig.set(id + ".last_login", logicalDate.toString());
                 saveData();
-                p.sendMessage("§6§l🌙 Day " + (unlocked + 1) + " terbuka! §fKetik §b/gm daily §funtuk klaim.");
+                p.sendMessage("§6§l🌙 Day " + (unlocked + 1) + " terbuka! §fKetik §b/gm daily");
             }
         }
     }
@@ -64,11 +67,20 @@ public class DailyManager implements Listener {
     }
 
     public ItemStack getSpecialBlade() {
-        ItemStack s = new ItemStack(Material.NETHERITE_SWORD);
+        ItemStack s = new ItemStack(Material.GOLDEN_SWORD);
         ItemMeta m = s.getItemMeta();
         m.setDisplayName("§6§lGolden Crescent Blade");
-        m.setLore(Arrays.asList("§7Ramadhan 2026 Special", "§eSkill: §6Lunar Sweep (Hit)", "§eSkill: §6Lunar Shield (Shift)"));
+        m.setLore(Arrays.asList(
+            "§7Ramadhan 2026 Special", 
+            "§fStatus: §aLegendary",
+            "§eSkill 1: §6Lunar Slash (Hit)",
+            "§eSkill 2: §6Crescent Burst (5x Hit + Shift)",
+            "§bPasif: §fKeep Inventory (Soulbound)"
+        ));
+        // Wajib pasang PDC supaya SkillListener ngenalin pedang ini
+        m.getPersistentDataContainer().set(GoldenMoon.SWORD_KEY, PersistentDataType.BYTE, (byte) 1);
         m.setUnbreakable(true);
+        m.addItemFlags(ItemFlag.HIDE_UNBREAKABLE, ItemFlag.HIDE_ATTRIBUTES);
         s.setItemMeta(m);
         return s;
     }
