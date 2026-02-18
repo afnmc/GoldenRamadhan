@@ -18,6 +18,10 @@ public class SkillListener implements Listener {
 
     public SkillListener(GoldenMoon plugin) {
         this.plugin = plugin;
+        startVisualTask();
+    }
+
+    private void startVisualTask() {
         new BukkitRunnable() {
             double rot = 0;
             @Override
@@ -52,7 +56,7 @@ public class SkillListener implements Listener {
         comboStack.put(id, Math.min(comboStack.getOrDefault(id, 0) + 1, 5));
 
         if (e.getEntity() instanceof LivingEntity target && target.getHealth() <= e.getFinalDamage()) {
-            p.teleport(target.getLocation()); // Skill Dash
+            p.teleport(target.getLocation());
             p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 2f);
         }
     }
@@ -65,11 +69,11 @@ public class SkillListener implements Listener {
         int stack = comboStack.getOrDefault(p.getUniqueId(), 0);
         if (stack >= 5) {
             comboStack.put(p.getUniqueId(), 0);
-            p.playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f); // Skill Burst
+            p.playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
             p.getWorld().spawnParticle(Particle.FLASH, p.getLocation(), 5);
         } else {
             double max = p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
-            p.setHealth(Math.min(p.getHealth() + 1.0, max)); // Skill Recall/Heal
+            p.setHealth(Math.min(p.getHealth() + 1.0, max));
         }
     }
 
@@ -77,9 +81,4 @@ public class SkillListener implements Listener {
         ItemStack i = p.getInventory().getItemInMainHand();
         return i != null && i.hasItemMeta() && i.getItemMeta().getPersistentDataContainer().has(GoldenMoon.SWORD_KEY, PersistentDataType.BYTE);
     }
-}
-    private boolean isHolding(Player p) {
-        ItemStack i = p.getInventory().getItemInMainHand();
-        return i != null && i.hasItemMeta() && i.getItemMeta().getPersistentDataContainer().has(GoldenMoon.SWORD_KEY, PersistentDataType.BYTE);
-    }
-}
+} // <--- Pastikan tanda kurung ini ada di paling bawah!
