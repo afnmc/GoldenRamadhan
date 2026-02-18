@@ -10,12 +10,9 @@ import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
-
 import java.util.*;
 
 public class ItemGuard implements Listener {
-    
-    // Map buat nyimpen item pas mati biar gak ilang
     private final Map<UUID, List<ItemStack>> savedItems = new HashMap<>();
 
     @EventHandler
@@ -23,11 +20,12 @@ public class ItemGuard implements Listener {
         ItemStack item = e.getInventory().getItem(0);
         if (item == null || !isSpecial(item)) return;
 
-        // Blokir rename: kalau teks di box rename gak kosong, hasil output ilang
+        // Blokir HANYA jika player mencoba mengganti nama (renameText tidak kosong)
         String renameText = e.getInventory().getRenameText();
-        if (renameText != null && !renameText.isEmpty()) {
-            e.setResult(null);
+        if (renameText != null && !renameText.trim().isEmpty()) {
+            e.setResult(null); 
         }
+        // Jika rename kosong (cuma enchant/repair), biarkan result default dari Minecraft jalan
     }
 
     @EventHandler
@@ -39,26 +37,20 @@ public class ItemGuard implements Listener {
     public void onDeath(PlayerDeathEvent e) {
         Player p = e.getEntity();
         List<ItemStack> toSave = new ArrayList<>();
-        
-        // Cek semua drop, kalau ada pedang sakti, ambil dan hapus dari lantai
-        Iterator<ItemStack> iterator = e.getDrops().iterator();
-        while (iterator.hasNext()) {
-            ItemStack item = iterator.next();
+        Iterator<ItemStack> it = e.getDrops().iterator();
+        while (it.hasNext()) {
+            ItemStack item = it.next();
             if (isSpecial(item)) {
                 toSave.add(item.clone());
-                iterator.remove();
+                it.remove();
             }
         }
-        
-        if (!toSave.isEmpty()) {
-            savedItems.put(p.getUniqueId(), toSave);
-        }
+        if (!toSave.isEmpty()) savedItems.put(p.getUniqueId(), toSave);
     }
 
     @EventHandler
     public void onRespawn(PlayerRespawnEvent e) {
         Player p = e.getPlayer();
-        // Balikin item yang disimpen tadi pas player hidup lagi
         if (savedItems.containsKey(p.getUniqueId())) {
             for (ItemStack item : savedItems.get(p.getUniqueId())) {
                 p.getInventory().addItem(item);
