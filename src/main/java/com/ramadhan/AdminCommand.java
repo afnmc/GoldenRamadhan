@@ -1,15 +1,9 @@
 package com.ramadhan;
 
-import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataType;
-import java.util.ArrayList;
-import java.util.List;
 
 public class AdminCommand implements CommandExecutor {
     private final GoldenMoon plugin;
@@ -23,39 +17,25 @@ public class AdminCommand implements CommandExecutor {
         if (!(sender instanceof Player player)) return true;
 
         if (args.length > 0) {
-            // JALUR DAILY: Bisa dibuka semua player (Member & Admin)
+            // Jalur Member: /gm daily
             if (args[0].equalsIgnoreCase("daily")) {
-                // Pastikan method di DailyManager namanya sesuai, biasanya open atau openGUI
-                plugin.getDailyManager().open(player); 
+                plugin.getDailyManager().openDailyMenu(player);
                 return true;
             }
 
-            // JALUR GETSWORD: Khusus Admin/OP
+            // Jalur Admin: /gm getsword
             if (args[0].equalsIgnoreCase("getsword")) {
                 if (!player.hasPermission("goldenmoon.admin")) {
-                    player.sendMessage("§c§l[!] §cIzin ditolak! Cuma Admin yang bisa pake command ini.");
+                    player.sendMessage("§c§l[!] §cIzin ditolak! Khusus Admin.");
                     return true;
                 }
-                player.getInventory().addItem(createLunarSword());
-                player.sendMessage("§f§l[!] §ePedang Lunar ditambahkan!");
+                player.getInventory().addItem(plugin.getDailyManager().getSpecialBlade());
+                player.sendMessage("§f§l[!] §ePedang Lunar ditambahkan ke inventory!");
                 return true;
             }
         }
 
         player.sendMessage("§eGunakan: §f/gm daily §eatau §f/gm getsword");
         return true;
-    }
-
-    private ItemStack createLunarSword() {
-        ItemStack sword = new ItemStack(Material.NETHERITE_SWORD);
-        ItemMeta meta = sword.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName("§f§lLunar §e§lCrescent Blade");
-            // Menggunakan PersistentData agar fitur Lunar Putih tetap jalan meski rename
-            meta.getPersistentDataContainer().set(GoldenMoon.SWORD_KEY, PersistentDataType.BYTE, (byte) 1);
-            meta.setUnbreakable(true);
-            sword.setItemMeta(meta);
-        }
-        return sword;
     }
 }
