@@ -31,8 +31,6 @@ public class SkillListener implements Listener {
                 for (Player p : Bukkit.getOnlinePlayers()) {
                     if (!isHolding(p)) continue;
                     int stack = comboStack.getOrDefault(p.getUniqueId(), 0);
-                    
-                    // Partikel Putih di Samping (Makin banyak stack makin rame)
                     drawSideParticles(p, stack);
                 }
             }
@@ -46,7 +44,6 @@ public class SkillListener implements Listener {
             double angle = rand.nextDouble() * 2 * Math.PI;
             double x = Math.cos(angle) * 0.6;
             double z = Math.sin(angle) * 0.6;
-            // Bedrock Fix: Speed 0 biar gak melayang turun
             p.getWorld().spawnParticle(Particle.FIREWORK, loc.clone().add(x, (rand.nextDouble() - 0.5) * 1.5, z), 0, 0, 0, 0, 0);
         }
     }
@@ -56,7 +53,7 @@ public class SkillListener implements Listener {
         if (!(e.getDamager() instanceof Player p) || !isHolding(p)) return;
         if (!(e.getEntity() instanceof LivingEntity target)) return;
 
-        // Dash Dikit pas mukul
+        // Dash Strike
         p.setVelocity(p.getLocation().getDirection().multiply(0.2).setY(0.1));
 
         drawEpicSlash(target.getLocation());
@@ -67,12 +64,12 @@ public class SkillListener implements Listener {
 
         if (stack == 5) {
             p.sendTitle("", "§f§l● READY ●", 0, 10, 5);
-            p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_CHIME, 1f, 2f);
+            p.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 0.8f, 2f);
         }
 
         if (target.getHealth() <= e.getFinalDamage()) {
             p.teleport(target.getLocation());
-            p.playSound(p.getLocation(), Sound.ENTITY_ZOMBIE_VILLAGER_CONVERTED, 1f, 2f);
+            p.playSound(p.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.5f, 2f);
             drawThunderFall(target.getLocation());
         }
     }
@@ -101,28 +98,25 @@ public class SkillListener implements Listener {
 
         if (stack >= 5) {
             comboStack.put(p.getUniqueId(), 0);
-            // ULTI: Nusuk Ke Depan
             p.playSound(p.getLocation(), Sound.ENTITY_WARDEN_SONIC_BOOM, 1f, 1.2f);
             p.getWorld().spawnParticle(Particle.SONIC_BOOM, p.getLocation().add(p.getLocation().getDirection().multiply(2)), 1, 0, 0, 0, 0);
             
             for (Entity en : p.getNearbyEntities(5, 5, 5)) {
                 if (en instanceof LivingEntity le && en != p) {
-                    // Cek FOV biar gak bantai belakang badan
                     Vector toEntity = le.getLocation().toVector().subtract(p.getLocation().toVector());
                     if (p.getLocation().getDirection().dot(toEntity.normalize()) > 0.5) {
-                        le.damage(15, p); // Damage dikurangi biar gak OP
-                        le.setVelocity(p.getLocation().getDirection().multiply(1.5));
+                        le.damage(15, p); 
+                        le.setVelocity(p.getLocation().getDirection().multiply(1.5).setY(0.4));
                     }
                 }
             }
         } else {
-            // RECALL: Dengan Cooldown
             long now = System.currentTimeMillis();
             if (recallCooldown.getOrDefault(p.getUniqueId(), 0L) > now) {
-                p.sendMessage("§cRecall masih cooldown!");
+                p.sendMessage("§cRecall cooldown: " + ((recallCooldown.get(p.getUniqueId()) - now) / 1000) + "s");
                 return;
             }
-            recallCooldown.put(p.getUniqueId(), now + 10000); // 10 Detik
+            recallCooldown.put(p.getUniqueId(), now + 10000); 
             
             drawCircleHeal(p);
             p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 40, 2));
@@ -136,7 +130,8 @@ public class SkillListener implements Listener {
             double angle = Math.toRadians(i);
             double x = Math.cos(angle) * 1.5;
             double z = Math.sin(angle) * 1.5;
-            p.getWorld().spawnParticle(Particle.VILLAGER_HAPPY, loc.clone().add(x, 0.1, z), 1, 0, 0, 0, 0);
+            // FIX PARTICLE NAME 1.21.1
+            p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, loc.clone().add(x, 0.1, z), 1, 0, 0, 0, 0);
         }
     }
 
