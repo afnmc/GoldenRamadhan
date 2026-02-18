@@ -1,23 +1,31 @@
 package com.ramadhan;
 
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
-import java.util.List;
+
+import java.util.*;
 
 public class ItemGuard implements Listener {
+    
+    // Map buat nyimpen item pas mati biar gak ilang
+    private final Map<UUID, List<ItemStack>> savedItems = new HashMap<>();
 
     @EventHandler
     public void onAnvil(PrepareAnvilEvent e) {
         ItemStack item = e.getInventory().getItem(0);
         if (item == null || !isSpecial(item)) return;
-        // Izinkan Enchant, tapi jika kolom rename diisi, hilangkan hasilnya
-        if (e.getInventory().getRenameText() != null && !e.getInventory().getRenameText().isEmpty()) {
+
+        // Blokir rename: kalau teks di box rename gak kosong, hasil output ilang
+        String renameText = e.getInventory().getRenameText();
+        if (renameText != null && !renameText.isEmpty()) {
             e.setResult(null);
         }
     }
@@ -29,15 +37,34 @@ public class ItemGuard implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onDeath(PlayerDeathEvent e) {
-        List<ItemStack> drops = e.getDrops();
-        // Cari item special dan hapus dari drops agar tidak jatuh ke tanah
-        drops.removeIf(item -> {
+        Player p = e.getEntity();
+        List<ItemStack> toSave = new ArrayList<>();
+        
+        // Cek semua drop, kalau ada pedang sakti, ambil dan hapus dari lantai
+        Iterator<ItemStack> iterator = e.getDrops().iterator();
+        while (iterator.hasNext()) {
+            ItemStack item = iterator.next();
             if (isSpecial(item)) {
-                e.getItemsToKeep().add(item); // Simpan di inventory player saat respawn
-                return true;
+                toSave.add(item.clone());
+                iterator.remove();
             }
-            return false;
-        });
+        }
+        
+        if (!toSave.isEmpty()) {
+            savedItems.put(p.getUniqueId(), toSave);
+        }
+    }
+
+    @EventHandler
+    public void onRespawn(PlayerRespawnEvent e) {
+        Player p = e.getPlayer();
+        // Balikin item yang disimpen tadi pas player hidup lagi
+        if (savedItems.containsKey(p.getUniqueId())) {
+            for (ItemStack item : savedItems.get(p.getUniqueId())) {
+                p.getInventory().addItem(item);
+            }
+            savedItems.remove(p.getUniqueId());
+        }
     }
 
     private boolean isSpecial(ItemStack item) {
