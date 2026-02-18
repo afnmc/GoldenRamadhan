@@ -18,41 +18,32 @@ public class AdminCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
         if (!(s instanceof Player p)) return true;
-        if (a.length > 0) {
-            if (a[0].equalsIgnoreCase("daily")) {
-                new DailyGUI(plugin).open(p);
-            } 
-            else if (a[0].equalsIgnoreCase("getsword") && p.isOp()) {
-                // --- PEMBUATAN PEDANG KHUSUS ---
-                ItemStack sword = new ItemStack(Material.GOLDEN_SWORD);
-                ItemMeta meta = sword.getItemMeta();
+        
+        if (a.length > 0 && a[0].equalsIgnoreCase("getsword") && p.isOp()) {
+            ItemStack sword = new ItemStack(Material.GOLDEN_SWORD);
+            ItemMeta meta = sword.getItemMeta();
 
-                // 1. Pasang Nama & Lore
-                meta.setDisplayName("§6§lGolden Crescent Blade");
-                List<String> lore = new ArrayList<>();
-                lore.add("§7Pedang Legendaris Ramadhan.");
-                lore.add("§eSkill: §fSabit Aura & Ledakan");
-                lore.add("§8(Tidak akan hilang saat mati)");
-                meta.setLore(lore);
+            meta.setDisplayName("§6§lGolden Crescent Blade");
+            List<String> lore = new ArrayList<>();
+            lore.add("§7Senjata suci dari cahaya bulan.");
+            lore.add("");
+            lore.add("§f§lSKILL PASIF:");
+            lore.add("§e- Moonlight Aura: §fSabit di punggung.");
+            lore.add("§e- Soul Bound: §fTidak hilang saat mati.");
+            lore.add("");
+            lore.add("§f§lSKILL AKTIF:");
+            lore.add("§e- Left Click: §fDiagonal Moon Slash.");
+            lore.add("§e- 5x Hit + Sneak: §fCrescent Burst.");
+            lore.add("§e- Sneak (No Combo): §fMoonlight Heal.");
+            
+            meta.setLore(lore);
+            meta.getPersistentDataContainer().set(GoldenMoon.SWORD_KEY, PersistentDataType.BYTE, (byte) 1);
+            meta.setUnbreakable(true);
+            meta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE, ItemFlag.HIDE_ATTRIBUTES);
 
-                // 2. Pasang SEGEL (Biar gak bisa dipalsuin)
-                meta.getPersistentDataContainer().set(GoldenMoon.SWORD_KEY, PersistentDataType.BYTE, (byte) 1);
-
-                // 3. Bikin Tidak Bisa Hancur
-                meta.setUnbreakable(true);
-                meta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE); // Sembunyikan tulisan Unbreakable biar rapi
-                meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-
-                sword.setItemMeta(meta);
-                // -------------------------------
-
-                p.getInventory().addItem(sword);
-                p.sendMessage("§aPedang Legendaris diberikan!");
-            } 
-            else if (a[0].equalsIgnoreCase("reset") && p.isOp()) {
-                plugin.getDailyManager().setClaimedLevel(p.getUniqueId(), 0);
-                p.sendMessage("§aData klaim direset!");
-            }
+            sword.setItemMeta(meta);
+            p.getInventory().addItem(sword);
+            p.sendMessage("§e§l[!] §fKamu menerima senjata legendaris.");
         }
         return true;
     }
