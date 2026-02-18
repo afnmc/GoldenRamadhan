@@ -17,13 +17,19 @@ public class AdminCommand implements CommandExecutor {
         if (!(sender instanceof Player p)) return true;
         if (!p.hasPermission("goldenmoon.admin")) return true;
 
+        // Command: /goldenmoon get (Untuk ambil pedang)
         if (args.length > 0 && args[0].equalsIgnoreCase("get")) {
             p.getInventory().addItem(plugin.getDailyManager().getSpecialBlade());
-            p.sendMessage("§aBerhasil mengambil pedang!");
-        } else {
-            plugin.getDailyManager().getAbidjanDate(); // Ping jam
-            new DailyGUI(plugin).openInventory(p);
+            p.sendMessage("§6§lGoldenMoon §7» §aPedang suci berhasil ditambahkan!");
+            return true;
         }
+
+        // Command: /goldenmoon (Untuk buka GUI Daily)
+        // Kita panggil getRelativeDay() untuk mastiin sistem tanggal jalan
+        int day = plugin.getDailyManager().getRelativeDay();
+        p.sendMessage("§6§lGoldenMoon §7» §fHari saat ini: §eDay " + (day > 30 ? "Event End" : day));
+        
+        new DailyGUI(plugin).openInventory(p);
         return true;
     }
 }
