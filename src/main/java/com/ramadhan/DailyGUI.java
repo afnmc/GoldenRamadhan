@@ -2,7 +2,6 @@ package com.ramadhan;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -10,64 +9,70 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DailyGUI implements Listener {
     private final GoldenMoon plugin;
-    public DailyGUI(GoldenMoon plugin) { this.plugin = plugin; }
+    private final Inventory inventory;
 
-    public void open(Player p) {
-        Inventory inv = Bukkit.createInventory(null, 54, "§8🌙 Rewards Claim");
+    public DailyGUI(GoldenMoon plugin) {
+        this.plugin = plugin;
+        this.inventory = Bukkit.createInventory(null, 54, "§0Daily Login Ramadhan");
+    }
+
+    // FIX: Method ini yang dicari AdminCommand
+    public void openInventory(Player p) {
+        setupItems(p);
+        p.openInventory(this.inventory);
+    }
+
+    private void setupItems(Player p) {
         int unlocked = plugin.getDailyManager().getUnlockedLevel(p.getUniqueId());
         int claimed = plugin.getDailyManager().getClaimedLevel(p.getUniqueId());
 
         for (int i = 1; i <= 30; i++) {
             ItemStack item;
-            String status;
             if (i <= claimed) {
-                item = new ItemStack(Material.LIME_STAINED_GLASS_PANE);
-                status = "§a✔ Sudah Diklaim";
+                item = createItem(Material.MAP, "§7Day " + i, "§aSUDAH DIKLAIM");
             } else if (i <= unlocked) {
-                item = new ItemStack(i == 30 ? Material.NETHERITE_SWORD : Material.GOLD_BLOCK);
-                status = "§e§lSIAP KLAIM!";
+                item = createItem(Material.CHEST_MINECART, "§eDay " + i, "§fKlik untuk Klaim Hadiah!");
             } else {
-                item = new ItemStack(Material.RED_STAINED_GLASS_PANE);
-                status = "§c🔒 Belum Terbuka";
+                item = createItem(Material.BARRIER, "§cDay " + i, "§7Belum terbuka.");
             }
-            ItemMeta m = item.getItemMeta();
-            m.setDisplayName("§6Day " + i);
-            m.setLore(Arrays.asList("", status));
-            item.setItemMeta(m);
-            inv.setItem(i - 1, item);
+            inventory.setItem(i + 9, item); // Mulai dari baris kedua
         }
-        p.openInventory(inv);
+    }
+
+    private ItemStack createItem(Material mat, String name, String loreStr) {
+        ItemStack item = new ItemStack(mat);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(name);
+        List<String> lore = new ArrayList<>();
+        lore.add(loreStr);
+        meta.setLore(lore);
+        item.setItemMeta(meta);
+        return item;
     }
 
     @EventHandler
     public void onClick(InventoryClickEvent e) {
-        if (!e.getView().getTitle().equals("§8🌙 Rewards Claim")) return;
+        if (!e.getView().getTitle().equals("§0Daily Login Ramadhan")) return;
         e.setCancelled(true);
-        if (e.getClickedInventory() != e.getView().getTopInventory()) return;
+        
+        if (!(e.getWhoClicked() instanceof Player p)) return;
+        int slot = e.getRawSlot() - 9;
+        
+        if (slot >= 1 && slot <= 30) {
+            int unlocked = plugin.getDailyManager().getUnlockedLevel(p.getUniqueId());
+            int claimed = plugin.getDailyManager().getClaimedLevel(p.getUniqueId());
 
-        Player p = (Player) e.getWhoClicked();
-        int day = e.getSlot() + 1;
-        if (day < 1 || day > 30) return;
-
-        int unlocked = plugin.getDailyManager().getUnlockedLevel(p.getUniqueId());
-        int claimed = plugin.getDailyManager().getClaimedLevel(p.getUniqueId());
-
-        if (day <= unlocked) {
-            if (day > claimed) {
-                plugin.getDailyManager().setClaimedLevel(p.getUniqueId(), day);
-                plugin.getDailyManager().giveReward(p, day);
-                p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1, 1);
+            if (slot == claimed + 1 && slot <= unlocked) {
+                plugin.getDailyManager().giveReward(p, slot);
+                plugin.getDailyManager().setClaimedLevel(p.getUniqueId(), slot);
                 p.closeInventory();
-                p.sendMessage("§aBerhasil klaim Day " + day);
-            } else {
-                p.sendMessage("§cSudah diklaim!");
+                p.sendMessage("§a§l[!] §fHadiah Day " + slot + " berhasil diklaim!");
             }
-        } else {
-            p.sendMessage("§cDay " + day + " belum terbuka! Login besok.");
         }
     }
 }
