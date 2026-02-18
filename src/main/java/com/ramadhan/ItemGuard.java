@@ -5,7 +5,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
@@ -15,24 +14,13 @@ import java.util.*;
 public class ItemGuard implements Listener {
     private final Map<UUID, List<ItemStack>> savedItems = new HashMap<>();
 
-    @EventHandler
-    public void onAnvil(PrepareAnvilEvent e) {
-        ItemStack item = e.getInventory().getItem(0);
-        if (item == null || !isSpecial(item)) return;
-
-        // Blokir HANYA jika player mencoba mengganti nama (renameText tidak kosong)
-        String renameText = e.getInventory().getRenameText();
-        if (renameText != null && !renameText.trim().isEmpty()) {
-            e.setResult(null); 
-        }
-        // Jika rename kosong (cuma enchant/repair), biarkan result default dari Minecraft jalan
-    }
-
+    // DURABILITY: Tetap abadi
     @EventHandler
     public void onDurability(PlayerItemDamageEvent e) {
         if (isSpecial(e.getItem())) e.setCancelled(true);
     }
 
+    // KEEP ON DEATH: Gak bakal drop pas mati
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onDeath(PlayerDeathEvent e) {
         Player p = e.getEntity();
