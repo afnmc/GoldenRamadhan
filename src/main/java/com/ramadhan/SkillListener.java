@@ -31,20 +31,33 @@ public class SkillListener implements Listener {
                 for (Player p : Bukkit.getOnlinePlayers()) {
                     if (!isHolding(p)) continue;
                     int stack = comboStack.getOrDefault(p.getUniqueId(), 0);
-                    drawSideParticles(p, stack);
+                    
+                    // Sabit Punggung (Visual Dasar)
+                    drawBackMoon(p, stack);
+                    // Combo Visual (Samping Badan)
+                    if (stack > 0) drawComboSide(p, stack);
                 }
             }
         }.runTaskTimer(plugin, 0L, 2L);
     }
 
-    private void drawSideParticles(Player p, int stack) {
-        if (stack <= 0) return;
-        Location loc = p.getLocation().add(0, 1, 0);
-        for (int i = 0; i < stack * 2; i++) {
-            double angle = rand.nextDouble() * 2 * Math.PI;
-            double x = Math.cos(angle) * 0.6;
-            double z = Math.sin(angle) * 0.6;
-            p.getWorld().spawnParticle(Particle.FIREWORK, loc.clone().add(x, (rand.nextDouble() - 0.5) * 1.5, z), 0, 0, 0, 0, 0);
+    private void drawBackMoon(Player p, int stack) {
+        Location loc = p.getLocation().add(0, 1.2, 0).subtract(p.getLocation().getDirection().setY(0).normalize().multiply(0.4));
+        Vector right = new Vector(-p.getLocation().getDirection().getZ(), 0, p.getLocation().getDirection().getX()).normalize();
+        Color col = (stack >= 5) ? Color.WHITE : Color.fromRGB(255, 215, 0);
+
+        for (double t = -1.2; t <= 1.2; t += 0.2) {
+            Location pLoc = loc.clone().add(right.clone().multiply(t * 0.8)).add(0, Math.cos(t) * 0.5, 0);
+            p.getWorld().spawnParticle(Particle.DUST, pLoc, 1, 0, 0, 0, 0, new Particle.DustOptions(col, 0.6f));
+        }
+    }
+
+    private void drawComboSide(Player p, int stack) {
+        Location loc = p.getLocation().add(0, 0.8, 0);
+        for (int i = 0; i < stack; i++) {
+            double side = (i % 2 == 0) ? 0.7 : -0.7;
+            Vector v = new Vector(-p.getLocation().getDirection().getZ(), 0, p.getLocation().getDirection().getX()).normalize().multiply(side);
+            p.getWorld().spawnParticle(Particle.FIREWORK, loc.clone().add(v).add(0, (rand.nextDouble() - 0.5) * 0.5, 0), 0, 0, 0, 0, 0);
         }
     }
 
@@ -53,24 +66,24 @@ public class SkillListener implements Listener {
         if (!(e.getDamager() instanceof Player p) || !isHolding(p)) return;
         if (!(e.getEntity() instanceof LivingEntity target)) return;
 
-        // Dash Strike
-        p.setVelocity(p.getLocation().getDirection().multiply(0.2).setY(0.1));
+        // Dash & Air Attack Effect
+        Vector dir = p.getLocation().getDirection().setY(0).normalize();
+        p.setVelocity(dir.multiply(0.25).setY(0.1));
+        
+        if (!p.isOnGround()) {
+            target.getWorld().spawnParticle(Particle.CLOUD, target.getLocation().add(0, 1, 0), 5, 0.2, 0.2, 0.2, 0.01);
+            p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1f, 1.5f);
+        }
 
         drawEpicSlash(target.getLocation());
-        p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1f, 1.2f);
+        p.playSound(p.getLocation(), Sound.ENTITY_IRON_GOLEM_ATTACK, 0.5f, 1.8f);
         
         int stack = Math.min(comboStack.getOrDefault(p.getUniqueId(), 0) + 1, 5);
         comboStack.put(p.getUniqueId(), stack);
 
         if (stack == 5) {
-            p.sendTitle("", "§f§l● READY ●", 0, 10, 5);
+            p.sendTitle("", "§f§lREADY", 0, 10, 5);
             p.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 0.8f, 2f);
-        }
-
-        if (target.getHealth() <= e.getFinalDamage()) {
-            p.teleport(target.getLocation());
-            p.playSound(p.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.5f, 2f);
-            drawThunderFall(target.getLocation());
         }
     }
 
@@ -83,13 +96,6 @@ public class SkillListener implements Listener {
         }
     }
 
-    private void drawThunderFall(Location loc) {
-        for (double y = 0; y <= 5; y += 0.5) {
-            loc.getWorld().spawnParticle(Particle.END_ROD, loc.clone().add(0, y, 0), 1, 0, 0, 0, 0);
-        }
-        loc.getWorld().spawnParticle(Particle.FLASH, loc, 1, 0, 0, 0, 0);
-    }
-
     @EventHandler
     public void onSneak(PlayerToggleSneakEvent e) {
         Player p = e.getPlayer();
@@ -98,41 +104,58 @@ public class SkillListener implements Listener {
 
         if (stack >= 5) {
             comboStack.put(p.getUniqueId(), 0);
+            
+            // ULTI: Lunar Pierce (Nusuk Depan)
+            p.playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 1.5f);
             p.playSound(p.getLocation(), Sound.ENTITY_WARDEN_SONIC_BOOM, 1f, 1.2f);
-            p.getWorld().spawnParticle(Particle.SONIC_BOOM, p.getLocation().add(p.getLocation().getDirection().multiply(2)), 1, 0, 0, 0, 0);
             
-            for (Entity en : p.getNearbyEntities(5, 5, 5)) {
-                if (en instanceof LivingEntity le && en != p) {
-                    Vector toEntity = le.getLocation().toVector().subtract(p.getLocation().toVector());
-                    if (p.getLocation().getDirection().dot(toEntity.normalize()) > 0.5) {
-                        le.damage(15, p); 
-                        le.setVelocity(p.getLocation().getDirection().multiply(1.5).setY(0.4));
+            Vector dashDir = p.getLocation().getDirection().multiply(1.5);
+            p.setVelocity(dashDir);
+
+            new BukkitRunnable() {
+                int t = 0;
+                @Override
+                public void run() {
+                    p.getWorld().spawnParticle(Particle.FLASH, p.getLocation().add(0,1,0), 1, 0,0,0,0);
+                    for (Entity en : p.getNearbyEntities(3, 3, 3)) {
+                        if (en instanceof LivingEntity le && en != p) {
+                            Vector toTarget = le.getLocation().toVector().subtract(p.getLocation().toVector());
+                            if (p.getLocation().getDirection().dot(toTarget.normalize()) > 0.7) {
+                                le.damage(15, p); // Damage lebih manusiawi
+                                le.setVelocity(p.getLocation().getDirection().multiply(1.2).setY(0.4));
+                            }
+                        }
                     }
+                    if (t++ > 3) this.cancel();
                 }
-            }
+            }.runTaskTimer(plugin, 0L, 1L);
+
         } else {
+            // RECALL: Cooldown 10s
             long now = System.currentTimeMillis();
-            if (recallCooldown.getOrDefault(p.getUniqueId(), 0L) > now) {
-                p.sendMessage("§cRecall cooldown: " + ((recallCooldown.get(p.getUniqueId()) - now) / 1000) + "s");
-                return;
-            }
-            recallCooldown.put(p.getUniqueId(), now + 10000); 
+            if (recallCooldown.getOrDefault(p.getUniqueId(), 0L) > now) return;
             
-            drawCircleHeal(p);
-            p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 40, 2));
-            p.playSound(p.getLocation(), Sound.BLOCK_BEACON_AMBIENT, 1f, 2f);
+            recallCooldown.put(p.getUniqueId(), now + 10000);
+            drawRecallVisual(p);
+            p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 60, 2));
+            p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 1f);
         }
     }
 
-    private void drawCircleHeal(Player p) {
-        Location loc = p.getLocation();
-        for (int i = 0; i < 360; i += 20) {
-            double angle = Math.toRadians(i);
-            double x = Math.cos(angle) * 1.5;
-            double z = Math.sin(angle) * 1.5;
-            // FIX PARTICLE NAME 1.21.1
-            p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, loc.clone().add(x, 0.1, z), 1, 0, 0, 0, 0);
-        }
+    private void drawRecallVisual(Player p) {
+        new BukkitRunnable() {
+            double y = 0;
+            @Override
+            public void run() {
+                for (int i = 0; i < 8; i++) {
+                    double angle = (y * 5) + (i * Math.PI / 4);
+                    Location l = p.getLocation().add(Math.cos(angle) * 1.2, y, Math.sin(angle) * 1.2);
+                    p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, l, 1, 0,0,0,0);
+                }
+                y += 0.3;
+                if (y > 2.5) this.cancel();
+            }
+        }.runTaskTimer(plugin, 0L, 1L);
     }
 
     private boolean isHolding(Player p) {
