@@ -1,5 +1,6 @@
 package com.ramadhan;
 
+import org.bukkit.ChatColor;
 import org.bukkit.NamespacedKey;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -14,19 +15,22 @@ public class GoldenMoon extends JavaPlugin {
         
         this.dailyManager = new DailyManager(this);
 
-        // Registrasi Event
+        // Register Listeners
         getServer().getPluginManager().registerEvents(new DailyGUI(this), this);
         getServer().getPluginManager().registerEvents(new SkillListener(this), this);
         
-        // Registrasi Command Admin (Buat ambil item)
-        if (getCommand("goldenmoon") != null) {
-            getCommand("goldenmoon").setExecutor(new AdminCommand(this));
-        }
+        // Register Command
+        getCommand("goldenmoon").setExecutor(new AdminCommand(this));
         
-        getLogger().info("§6[GoldenRamadhan] §aPlugin v17.5 Aktif! Timezone: Abidjan.");
+        getLogger().info("§6[GoldenRamadhan] §aPlugin v17.6 Loaded! Jam Abidjan Aktif.");
     }
 
-    public DailyManager getDailyManager() {
-        return dailyManager;
+    public DailyManager getDailyManager() { return dailyManager; }
+
+    // Fix Error getMsg
+    public String getMsg(String path) {
+        String msg = getConfig().getString("messages." + path);
+        if (msg == null) return "§cMessage " + path + " not found!";
+        return ChatColor.translateAlternateColorCodes('&', msg);
     }
 }
