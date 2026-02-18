@@ -7,17 +7,16 @@ import org.bukkit.plugin.java.JavaPlugin;
 public class GoldenMoon extends JavaPlugin {
 
     private static GoldenMoon instance;
-    private DailyManager dailyManager; // Tambahkan ini agar tidak error di DailyGUI
+    private DailyManager dailyManager;
     public static NamespacedKey SWORD_KEY;
 
     @Override
     public void onEnable() {
         instance = this;
         SWORD_KEY = new NamespacedKey(this, "golden_crescent_blade");
-
         saveDefaultConfig();
         
-        // WAJIB: Inisialisasi dailyManager biar gak NullPointerException
+        // Inisialisasi Manager
         this.dailyManager = new DailyManager(this);
 
         // Register Command
@@ -25,46 +24,25 @@ public class GoldenMoon extends JavaPlugin {
             getCommand("goldenmoon").setExecutor(new AdminCommand(this));
         }
 
-        // Register Listeners
-        registerListeners();
-
-        // Jalankan Task Visual Bulan
-        new MoonTask(this).runTaskTimer(this, 0L, 20L);
-
-        getLogger().info("========================================");
-        getLogger().info("   Golden Moon v13 - FINAL BUILD       ");
-        getLogger().info("   Status: Moonlight Ready!            ");
-        getLogger().info("========================================");
-    }
-
-    private void registerListeners() {
+        // Register Events
         var pm = getServer().getPluginManager();
         pm.registerEvents(dailyManager, this);
-        pm.registerEvents(new DailyGUI(this), this);
         pm.registerEvents(new SkillListener(this), this);
-        pm.registerEvents(new QuestManager(this), this);
-        pm.registerEvents(new MoonTask(this), this);
+        pm.registerEvents(new DailyGUI(this), this);
+
+        getLogger().info("========================================");
+        getLogger().info("   Golden Ramadhan v14 - STABLE        ");
+        getLogger().info("   Sistem: Individual Progress         ");
+        getLogger().info("========================================");
     }
 
-    /**
-     * Method untuk mengambil DailyManager.
-     * Dibutuhkan oleh DailyGUI agar build tidak error.
-     */
-    public DailyManager getDailyManager() {
-        return dailyManager;
-    }
+    public DailyManager getDailyManager() { return dailyManager; }
 
-    /**
-     * Method untuk mengambil pesan dari config dengan warna.
-     * Dibutuhkan oleh MoonTask dan QuestManager agar build tidak error.
-     */
     public String getMsg(String path) {
         String msg = getConfig().getString(path);
-        if (msg == null) return ChatColor.RED + "Config Missing: " + path;
+        if (msg == null) return ChatColor.RED + "Missing: " + path;
         return ChatColor.translateAlternateColorCodes('&', msg);
     }
 
-    public static GoldenMoon getInstance() {
-        return instance;
-    }
+    public static GoldenMoon getInstance() { return instance; }
 }
