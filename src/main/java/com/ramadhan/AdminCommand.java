@@ -1,9 +1,15 @@
 package com.ramadhan;
 
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AdminCommand implements CommandExecutor {
     private final GoldenMoon plugin;
@@ -17,21 +23,20 @@ public class AdminCommand implements CommandExecutor {
         if (!(sender instanceof Player player)) return true;
 
         if (args.length > 0) {
-            // 1. Jalur buat Member buka Daily
+            // JALUR DAILY: Bisa dibuka semua player (Member & Admin)
             if (args[0].equalsIgnoreCase("daily")) {
-                // Member gak butuh permission admin buat buka daily
-                plugin.getDailyManager().openGUI(player); 
+                // Pastikan method di DailyManager namanya sesuai, biasanya open atau openGUI
+                plugin.getDailyManager().open(player); 
                 return true;
             }
 
-            // 2. Jalur buat Admin ambil pedang instan
+            // JALUR GETSWORD: Khusus Admin/OP
             if (args[0].equalsIgnoreCase("getsword")) {
                 if (!player.hasPermission("goldenmoon.admin")) {
                     player.sendMessage("§c§l[!] §cIzin ditolak! Cuma Admin yang bisa pake command ini.");
                     return true;
                 }
-                // Panggil fungsi kasih pedang yang udah pake SWORD_KEY
-                giveLunarSword(player); 
+                player.getInventory().addItem(createLunarSword());
                 player.sendMessage("§f§l[!] §ePedang Lunar ditambahkan!");
                 return true;
             }
@@ -41,8 +46,16 @@ public class AdminCommand implements CommandExecutor {
         return true;
     }
 
-    // Fungsi ini yang bikin pedangnya sakti (Sabit Putih & TP Kill)
-    private void giveLunarSword(Player p) {
-        // ... (isi kodenya sama kayak yang gue kasih sebelumnya bre, pake SWORD_KEY)
+    private ItemStack createLunarSword() {
+        ItemStack sword = new ItemStack(Material.NETHERITE_SWORD);
+        ItemMeta meta = sword.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("§f§lLunar §e§lCrescent Blade");
+            // Menggunakan PersistentData agar fitur Lunar Putih tetap jalan meski rename
+            meta.getPersistentDataContainer().set(GoldenMoon.SWORD_KEY, PersistentDataType.BYTE, (byte) 1);
+            meta.setUnbreakable(true);
+            sword.setItemMeta(meta);
+        }
+        return sword;
     }
 }
