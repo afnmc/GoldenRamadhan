@@ -10,13 +10,12 @@ public class ItemGuard implements Listener {
 
     @EventHandler
     public void onAnvil(PrepareAnvilEvent e) {
-        ItemStack result = e.getResult();
-        if (result == null || !isSpecial(result)) return;
+        ItemStack item = e.getInventory().getItem(0);
+        if (item == null || !isSpecial(item)) return;
 
-        // Versi aman untuk cek rename tanpa trigger warning deprecation
-        String renameText = e.getInventory().getRenameText();
-        if (renameText != null && !renameText.isEmpty()) {
-            e.setResult(null); 
+        // Izinkan enchant, tapi blokir rename
+        if (e.getInventory().getRenameText() != null && !e.getInventory().getRenameText().isEmpty()) {
+            e.setResult(null);
         }
     }
 
