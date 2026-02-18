@@ -2,17 +2,7 @@ name: GoldenRamadhan
 version: 1.0
 main: com.ramadhan.GoldenMoon
 api-version: '1.21'
-description: Plugin Pedang Lunar dengan visual God Tier dan sistem Anti-Drop.
-author: Ramadhan
-
 commands:
   goldenmoon:
     aliases: [gm]
-    description: Main command untuk GoldenMoon.
-    permission: goldenmoon.admin
-    permission-message: "§cLo gak punya izin buat pake command ini, bre!"
-
-permissions:
-  goldenmoon.admin:
-    description: Izin buat ambil pedang sakti lunar via command.
-    default: op
+    description: Command utama GoldenMoon (Daily/Admin)
