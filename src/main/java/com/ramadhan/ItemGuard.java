@@ -1,5 +1,6 @@
 package com.ramadhan;
 
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -7,19 +8,25 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
-import java.util.List;
+import java.util.*;
 
 public class ItemGuard implements Listener {
 
-    // Anti Buang
+    // Simpan item sementara buat dikasih pas respawn
+    private final Map<UUID, List<ItemStack>> savedItems = new HashMap<>();
+
+    // 1. Anti Buang
     @EventHandler
     public void onDrop(PlayerDropItemEvent e) {
-        if (isSpecial(e.getItemDrop().getItemStack())) e.setCancelled(true);
+        if (isSpecial(e.getItemDrop().getItemStack())) {
+            e.setCancelled(true);
+        }
     }
 
-    // Anti Rename di Anvil
+    // 2. Anti Rename di Anvil
     @EventHandler
     public void onAnvil(InventoryClickEvent e) {
         if (e.getInventory().getType() == InventoryType.ANVIL && isSpecial(e.getCurrentItem())) {
@@ -27,17 +34,37 @@ public class ItemGuard implements Listener {
         }
     }
 
-    // Anti Drop pas mati (Keep on Death)
+    // 3. Anti Hilang Pas Mati (Manual Backup)
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onDeath(PlayerDeathEvent e) {
-        List<ItemStack> drops = e.getDrops();
-        drops.removeIf(item -> {
+        Player p = e.getEntity();
+        List<ItemStack> toSave = new ArrayList<>();
+        
+        // Cek item di drops, kalau ada yang spesial, hapus dari tanah dan simpan
+        Iterator<ItemStack> iterator = e.getDrops().iterator();
+        while (iterator.hasNext()) {
+            ItemStack item = iterator.next();
             if (isSpecial(item)) {
-                e.getItemsToKeep().add(item); // Masukin ke daftar barang yang tetep dibawa
-                return true;
+                toSave.add(item.clone());
+                iterator.remove();
             }
-            return false;
-        });
+        }
+        
+        if (!toSave.isEmpty()) {
+            savedItems.put(p.getUniqueId(), toSave);
+        }
+    }
+
+    // 4. Balikin item pas respawn
+    @EventHandler
+    public void onRespawn(PlayerRespawnEvent e) {
+        Player p = e.getPlayer();
+        if (savedItems.containsKey(p.getUniqueId())) {
+            for (ItemStack item : savedItems.get(p.getUniqueId())) {
+                p.getInventory().addItem(item);
+            }
+            savedItems.remove(p.getUniqueId());
+        }
     }
 
     private boolean isSpecial(ItemStack item) {
@@ -45,4 +72,3 @@ public class ItemGuard implements Listener {
                item.getItemMeta().getPersistentDataContainer().has(GoldenMoon.SWORD_KEY, PersistentDataType.BYTE);
     }
 }
-
