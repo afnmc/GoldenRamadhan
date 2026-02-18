@@ -26,8 +26,16 @@ public class GoldenMoon extends JavaPlugin {
         pm.registerEvents(dailyManager, this);
         pm.registerEvents(new SkillListener(this), this);
         pm.registerEvents(new DailyGUI(this), this);
+        pm.registerEvents(new QuestManager(this), this); // Pastikan ini ada
 
-        getLogger().info("Golden Moon v15 - Full Build Moon Stabilized!");
+        getLogger().info("Golden Moon v16 - Methods Restored!");
+    }
+
+    // Method yang dicari QuestManager dan MoonTask
+    public String getMsg(String path) {
+        String msg = getConfig().getString(path);
+        if (msg == null) return ChatColor.RED + "Missing: " + path;
+        return ChatColor.translateAlternateColorCodes('&', msg);
     }
 
     public DailyManager getDailyManager() { return dailyManager; }
