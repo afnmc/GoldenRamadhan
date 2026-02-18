@@ -3,9 +3,7 @@ package com.ramadhan;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
-import org.bukkit.event.entity.EntityDamageItemEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 public class ItemGuard implements Listener {
@@ -15,15 +13,11 @@ public class ItemGuard implements Listener {
         ItemStack result = e.getResult();
         if (result == null || !isSpecial(result)) return;
 
-        // Cek apakah player mencoba mengganti nama
-        if (e.getInventory().getRenameText() != null && !e.getInventory().getRenameText().isEmpty()) {
-            e.setResult(null); // Matiin output kalau mau di-rename
+        // Versi aman untuk cek rename tanpa trigger warning deprecation
+        String renameText = e.getInventory().getRenameText();
+        if (renameText != null && !renameText.isEmpty()) {
+            e.setResult(null); 
         }
-    }
-
-    @EventHandler
-    public void onItemDamage(EntityDamageItemEvent e) {
-        if (isSpecial(e.getItem().getItemStack())) e.setCancelled(true);
     }
 
     private boolean isSpecial(ItemStack item) {
