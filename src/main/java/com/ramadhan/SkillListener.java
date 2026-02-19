@@ -17,7 +17,6 @@ public class SkillListener implements Listener {
     private final GoldenMoon plugin;
     private final Map<UUID, Integer> comboStack = new HashMap<>();
     private final Map<UUID, Long> recallCooldown = new HashMap<>();
-    private final Random rand = new Random();
 
     public SkillListener(GoldenMoon plugin) {
         this.plugin = plugin;
@@ -29,37 +28,53 @@ public class SkillListener implements Listener {
             double rot = 0;
             @Override
             public void run() {
-                rot += 0.25;
+                rot += 0.20;
                 for (Player p : Bukkit.getOnlinePlayers()) {
                     if (!isHolding(p)) continue;
                     int stack = comboStack.getOrDefault(p.getUniqueId(), 0);
+                    
+                    // Efek Sabit di Punggung (Optimized for Java/Bedrock)
                     drawBackMoon(p, rot, stack);
+                    
                     if (stack > 0 && stack < 5) drawSideStack(p, stack);
                 }
             }
         }.runTaskTimer(plugin, 0L, 1L);
     }
 
+    /**
+     * Efek Sabit Punggung: Pakai END_ROD & WAX_ON agar tidak jatuh di Bedrock
+     */
     private void drawBackMoon(Player p, double rot, int stack) {
-        Location loc = p.getLocation().add(0, 1.2, 0).add(p.getLocation().getDirection().setY(0).normalize().multiply(-0.5));
-        Vector right = new Vector(-p.getLocation().getDirection().getZ(), 0, p.getLocation().getDirection().getX()).normalize();
-        Color col = (stack >= 5) ? Color.WHITE : Color.fromRGB(255, 215, 0);
+        Location loc = p.getLocation().add(0, 1.2, 0);
+        Vector dir = p.getLocation().getDirection().setY(0).normalize();
+        loc.add(dir.multiply(-0.4)); // Biar nempel di punggung
 
-        for (double t = -1.6; t <= 1.6; t += 0.1) {
+        Vector right = new Vector(-dir.getZ(), 0, dir.getX()).normalize();
+        
+        // Step 0.3 agar tidak terlalu rapat (mengurangi trail/jejak saat jalan)
+        for (double t = -1.5; t <= 1.5; t += 0.3) {
             double taper = Math.cos(t / 2.0);
             double rx = (Math.cos(t) * taper * Math.cos(rot)) - (Math.sin(t) * Math.sin(rot));
             double ry = (Math.cos(t) * taper * Math.sin(rot)) + (Math.sin(t) * Math.cos(rot));
+            
             Location pLoc = loc.clone().add(right.clone().multiply(rx)).add(0, ry, 0);
-            p.getWorld().spawnParticle(Particle.DUST, pLoc, 1, 0, 0, 0, 0, new Particle.DustOptions(col, 0.7f));
+
+            if (stack >= 5) {
+                p.getWorld().spawnParticle(Particle.END_ROD, pLoc, 1, 0, 0, 0, 0);
+            } else {
+                p.getWorld().spawnParticle(Particle.WAX_ON, pLoc, 1, 0, 0, 0, 0);
+                p.getWorld().spawnParticle(Particle.END_ROD, pLoc, 1, 0, 0, 0, 0);
+            }
         }
     }
 
     private void drawSideStack(Player p, int stack) {
         Location loc = p.getLocation().add(0, 0.8, 0);
         for (int i = 0; i < stack; i++) {
-            double side = (i % 2 == 0) ? 0.7 : -0.7;
+            double side = (i % 2 == 0) ? 0.6 : -0.6;
             Vector v = p.getLocation().getDirection().getCrossProduct(new Vector(0,1,0)).normalize().multiply(side);
-            p.getWorld().spawnParticle(Particle.FIREWORK, loc.clone().add(v), 0, 0, 0, 0, 0);
+            p.getWorld().spawnParticle(Particle.GLOW, loc.clone().add(v), 1, 0, 0, 0, 0);
         }
     }
 
@@ -68,8 +83,11 @@ public class SkillListener implements Listener {
         if (!(e.getDamager() instanceof Player p) || !isHolding(p)) return;
         if (!(e.getEntity() instanceof LivingEntity target)) return;
 
+        // Dash kecil saat mukul
         p.setVelocity(p.getLocation().getDirection().multiply(0.2).setY(0.1));
-        drawEpicSlash(target.getLocation());
+        
+        // Slash effect (Putih instan)
+        target.getWorld().spawnParticle(Particle.FLASH, target.getLocation().add(0, 1, 0), 1, 0, 0, 0, 0);
         
         int stack = Math.min(comboStack.getOrDefault(p.getUniqueId(), 0) + 1, 5);
         comboStack.put(p.getUniqueId(), stack);
@@ -79,7 +97,6 @@ public class SkillListener implements Listener {
             p.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 2f);
         }
 
-        // TP KILL: Balik lagi dengan visual nusuk atas-bawah
         if (target.getHealth() <= e.getFinalDamage()) {
             p.teleport(target.getLocation());
             executeTPKillEffect(target.getLocation());
@@ -88,30 +105,18 @@ public class SkillListener implements Listener {
 
     private void executeTPKillEffect(Location loc) {
         new BukkitRunnable() {
-            double y = 6.0;
+            double y = 4.0;
             @Override
             public void run() {
-                // Partikel nusuk kuning dari atas
-                loc.getWorld().spawnParticle(Particle.DUST, loc.clone().add(0, y, 0), 5, 0.1, 0.1, 0.1, 0, new Particle.DustOptions(Color.YELLOW, 1.5f));
-                loc.getWorld().spawnParticle(Particle.END_ROD, loc.clone().add(0, y, 0), 1, 0, 0, 0, 0);
-                
+                loc.getWorld().spawnParticle(Particle.END_ROD, loc.clone().add(0, y, 0), 2, 0, 0, 0, 0);
                 y -= 0.5;
                 if (y <= 0) {
-                    // Ledakan putih di bawah
                     loc.getWorld().spawnParticle(Particle.FLASH, loc, 1, 0, 0, 0, 0);
                     loc.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, loc, 1, 0, 0, 0, 0);
-                    loc.getWorld().spawnParticle(Particle.SNOWFLAKE, loc, 10, 0.5, 0.5, 0.5, 0.1);
-                    loc.getWorld().playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 1f, 1.5f);
                     this.cancel();
                 }
             }
         }.runTaskTimer(plugin, 0L, 1L);
-    }
-
-    private void drawEpicSlash(Location loc) {
-        for (double i = -1.3; i <= 1.3; i += 0.3) {
-            loc.getWorld().spawnParticle(Particle.DUST, loc.clone().add(i, 1.2, 0), 1, 0, 0, 0, 0, new Particle.DustOptions(Color.WHITE, 1f));
-        }
     }
 
     @EventHandler
@@ -124,41 +129,73 @@ public class SkillListener implements Listener {
             comboStack.put(p.getUniqueId(), 0);
             executeLunarUlti(p);
         } else {
+            // Skill Heal Biasa (Recall)
             long now = System.currentTimeMillis();
             if (recallCooldown.getOrDefault(p.getUniqueId(), 0L) > now) return;
             recallCooldown.put(p.getUniqueId(), now + 10000); 
             drawSpiralRecall(p);
             p.addPotionEffect(new PotionEffect(PotionEffectType.INSTANT_HEALTH, 1, 0));
-            p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 1f);
         }
     }
 
+    /**
+     * ULTIMATE: Buka Arena Domain + Buff Speed
+     */
     private void executeLunarUlti(Player p) {
-        p.playSound(p.getLocation(), Sound.ENTITY_WARDEN_SONIC_BOOM, 1f, 1.2f);
+        Location center = p.getLocation();
         
+        // Buff Speed II buat yang buka Combo
+        p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 120, 1)); 
+        p.sendMessage("§f§l● §e§lLUNAR DOMAIN ACTIVATED §f§l●");
+        
+        p.playSound(center, Sound.ENTITY_WARDEN_SONIC_BOOM, 1f, 1.2f);
+        p.playSound(center, Sound.BLOCK_BEACON_ACTIVATE, 1.5f, 0.5f);
+
+        // Draw Arena di Tanah
+        drawLunarArena(center);
+
+        // Damage & Knockup musuh sekitar
         for (Entity en : p.getNearbyEntities(7, 7, 7)) {
             if (en instanceof LivingEntity le && en != p) {
-                new BukkitRunnable() {
-                    int t = 0;
-                    @Override
-                    public void run() {
-                        double angle = t * 0.6;
-                        Location circle = le.getLocation().add(Math.cos(angle)*1.5, 0.5, Math.sin(angle)*1.5);
-                        le.getWorld().spawnParticle(Particle.DUST, circle, 5, 0, 0, 0, 0, new Particle.DustOptions(Color.WHITE, 1.2f));
-                        
-                        if (t >= 10) {
-                            // Ledakan Sabit Putih (Ulti)
-                            le.getWorld().spawnParticle(Particle.SONIC_BOOM, le.getLocation(), 1, 0, 0, 0, 0);
-                            le.getWorld().spawnParticle(Particle.FLASH, le.getLocation(), 2, 0.2, 0.2, 0.2, 0);
-                            le.damage(17, p);
-                            le.setVelocity(new Vector(0, 0.6, 0));
-                            this.cancel();
-                        }
-                        t++;
-                    }
-                }.runTaskTimer(plugin, 0L, 1L);
+                le.getWorld().spawnParticle(Particle.SONIC_BOOM, le.getLocation().add(0, 1, 0), 1, 0, 0, 0, 0);
+                le.damage(18, p);
+                le.setVelocity(new Vector(0, 0.8, 0));
+                le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 60, 2));
             }
         }
+    }
+
+    private void drawLunarArena(Location loc) {
+        new BukkitRunnable() {
+            int ticks = 0;
+            @Override
+            public void run() {
+                if (ticks > 40) { this.cancel(); return; }
+
+                // Outer Circle
+                double radius = 6.0;
+                for (double i = 0; i < Math.PI * 2; i += 0.4) {
+                    double x = Math.cos(i) * radius;
+                    double z = Math.sin(i) * radius;
+                    loc.getWorld().spawnParticle(Particle.END_ROD, loc.clone().add(x, 0.1, z), 1, 0, 0, 0, 0);
+                }
+
+                // Logo Bulan Sabit (Crescent) di Tengah
+                for (double t = -1.2; t <= 1.2; t += 0.15) {
+                    // Sisi Luar Kuning
+                    double x1 = Math.cos(t) * 2.8;
+                    double z1 = Math.sin(t) * 2.8;
+                    loc.getWorld().spawnParticle(Particle.WAX_ON, loc.clone().add(x1 - 1.2, 0.1, z1), 1, 0, 0, 0, 0);
+
+                    // Sisi Dalam Putih
+                    double x2 = Math.cos(t) * 2.0;
+                    double z2 = Math.sin(t) * 2.0;
+                    loc.getWorld().spawnParticle(Particle.END_ROD, loc.clone().add(x2 - 0.5, 0.1, z2), 1, 0, 0, 0, 0);
+                }
+                
+                ticks += 2;
+            }
+        }.runTaskTimer(plugin, 0L, 2L);
     }
 
     private void drawSpiralRecall(Player p) {
@@ -166,19 +203,18 @@ public class SkillListener implements Listener {
             double y = 0;
             @Override
             public void run() {
-                for (int i = 0; i < 8; i++) {
-                    double angle = (y * 5) + (i * Math.PI / 4);
-                    p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, p.getLocation().add(Math.cos(angle)*1.2, y, Math.sin(angle)*1.2), 1, 0, 0, 0, 0);
+                for (int i = 0; i < 4; i++) {
+                    double angle = (y * 5) + (i * Math.PI / 2);
+                    p.getWorld().spawnParticle(Particle.GLOW, p.getLocation().add(Math.cos(angle)*1.0, y, Math.sin(angle)*1.0), 1, 0, 0, 0, 0);
                 }
-                y += 0.3;
-                if (y > 3) this.cancel();
+                y += 0.4;
+                if (y > 2.5) this.cancel();
             }
         }.runTaskTimer(plugin, 0L, 1L);
     }
 
     private boolean isHolding(Player p) {
         ItemStack i = p.getInventory().getItemInMainHand();
-        // Cek data lunar, bukan cek nama
         return i != null && i.hasItemMeta() && i.getItemMeta().getPersistentDataContainer().has(GoldenMoon.SWORD_KEY, PersistentDataType.BYTE);
     }
 }
