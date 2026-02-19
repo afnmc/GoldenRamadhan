@@ -19,41 +19,30 @@ public class SkillListener implements Listener {
 
     public SkillListener(GoldenMoon plugin) {
         this.plugin = plugin;
-        startTicking();
+        startLunamSoulsTask();
     }
 
-    private void startTicking() {
+    // 1. Lunam Souls - Efek Orbiting (Visual & Pasif) [01:51]
+    private void startLunamSoulsTask() {
         new BukkitRunnable() {
-            double rot = 0;
+            double angle = 0;
             @Override
             public void run() {
-                rot += 0.20;
+                angle += 0.2;
                 for (Player p : Bukkit.getOnlinePlayers()) {
                     if (!isHolding(p)) continue;
+                    
                     int stack = comboStack.getOrDefault(p.getUniqueId(), 0);
-                    drawBackMoon(p, rot, stack);
+                    Location loc = p.getLocation().add(0, 1, 0);
+                    
+                    // Orbiting Particles (Kuning Emas & Putih Lunar)
+                    double x = Math.cos(angle) * 0.8;
+                    double z = Math.sin(angle) * 0.8;
+                    Color color = stack >= 5 ? Color.WHITE : Color.fromRGB(255, 215, 0);
+                    p.getWorld().spawnParticle(Particle.DUST, loc.clone().add(x, 0, z), 1, 0, 0, 0, 0, new Particle.DustOptions(color, 1.0f));
                 }
             }
         }.runTaskTimer(plugin, 0L, 1L);
-    }
-
-    // --- Efek Sabit di Punggung (Kuning/Putih) ---
-    private void drawBackMoon(Player p, double rot, int stack) {
-        Location loc = p.getLocation().add(0, 1.2, 0);
-        Vector dir = p.getLocation().getDirection().setY(0).normalize().multiply(-0.4);
-        loc.add(dir);
-        Vector right = new Vector(-dir.getZ(), 0, dir.getX()).normalize();
-        
-        Color col = stack >= 5 ? Color.WHITE : Color.fromRGB(255, 230, 100);
-        Particle.DustOptions dust = new Particle.DustOptions(col, 1.0f);
-
-        for (double t = -1.5; t <= 1.5; t += 0.4) {
-            double taper = Math.cos(t / 2.0);
-            double rx = (Math.cos(t) * taper * Math.cos(rot)) - (Math.sin(t) * Math.sin(rot));
-            double ry = (Math.cos(t) * taper * Math.sin(rot)) + (Math.sin(t) * Math.cos(rot));
-            Location pLoc = loc.clone().add(right.clone().multiply(rx * 0.6)).add(0, ry * 0.6, 0);
-            p.getWorld().spawnParticle(Particle.DUST, pLoc, 1, 0, 0, 0, 0, dust);
-        }
     }
 
     @EventHandler
@@ -61,66 +50,74 @@ public class SkillListener implements Listener {
         if (!(e.getDamager() instanceof Player p) || !isHolding(p)) return;
         if (!(e.getEntity() instanceof LivingEntity target)) return;
 
-        // Visual Hit (Slash Putih)
-        target.getWorld().spawnParticle(Particle.FLASH, target.getLocation().add(0, 1, 0), 1, 0, 0, 0, 0);
+        int stack = comboStack.getOrDefault(p.getUniqueId(), 0) + 1;
         
-        int stack = Math.min(comboStack.getOrDefault(p.getUniqueId(), 0) + 1, 5);
-        comboStack.put(p.getUniqueId(), stack);
+        // 2. Lunam Blade - Charged Attack tiap 3 Hit [00:11]
+        if (stack % 3 == 0) {
+            target.getWorld().spawnParticle(Particle.FLASH, target.getLocation().add(0, 1, 0), 1, 0, 0, 0, 0);
+            p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1f, 1.5f);
+            
+            // Efek Slash melingkar (Kuning)
+            drawSlashEffect(target.getLocation());
+        }
 
+        comboStack.put(p.getUniqueId(), Math.min(stack, 5));
+        
         if (stack == 5) {
-            p.sendTitle("", "§e§l● READY ●", 0, 10, 5);
+            p.sendTitle("", "§e§l● LUNAR POWER READY ●", 0, 10, 5);
             p.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 2f);
         }
     }
 
-    @EventHandler
-    public void onSneak(PlayerToggleSneakEvent e) {
-        Player p = e.getPlayer();
-        if (!isHolding(p) || !e.isSneaking()) return;
-        
-        int stack = comboStack.getOrDefault(p.getUniqueId(), 0);
-
-        // SYARAT: Lompat + Jongkok + 5 Stack
-        if (stack >= 5 && !((Entity)p).isOnGround()) {
-            comboStack.put(p.getUniqueId(), 0);
-            openLunamArena(p);
+    private void drawSlashEffect(Location loc) {
+        for (double i = 0; i < Math.PI * 2; i += 0.5) {
+            double x = Math.cos(i) * 1.5;
+            double z = Math.sin(i) * 1.5;
+            loc.getWorld().spawnParticle(Particle.DUST, loc.clone().add(x, 0.5, z), 1, 0, 0, 0, 0, new Particle.DustOptions(Color.fromRGB(255, 255, 150), 1.5f));
         }
     }
 
-    private void openLunamArena(Player p) {
-        Location center = p.getLocation().clone();
-        p.playSound(center, Sound.ENTITY_WARDEN_SONIC_BOOM, 1f, 1.5f);
+    @EventHandler
+    public void onUltiActivate(PlayerToggleSneakEvent e) {
+        Player p = e.getPlayer();
+        if (!isHolding(p) || !e.isSneaking()) return;
         
+        // Mekanik: Harus 5 stack DAN sedang melompat
+        if (comboStack.getOrDefault(p.getUniqueId(), 0) >= 5 && !((Entity)p).isOnGround()) {
+            comboStack.put(p.getUniqueId(), 0);
+            executeSwordsStorm(p);
+        }
+    }
+
+    // 3. Lunam Swords Storm - Ultimate Arena [01:25]
+    private void executeSwordsStorm(Player p) {
+        Location center = p.getLocation().clone();
+        p.playSound(center, Sound.ENTITY_WARDEN_SONIC_BOOM, 1.2f, 1.2f);
+
         new BukkitRunnable() {
             int ticks = 0;
             @Override
             public void run() {
-                if (ticks > 120) { this.cancel(); return; }
+                if (ticks > 100) { this.cancel(); return; }
 
-                // 1. Arena Ring (Kuning-Putih)
-                drawCircle(center, 9.0, Color.fromRGB(255, 215, 0)); 
-                drawCircle(center, 5.0, Color.WHITE);
+                // Arena Ring (Kuning-Putih)
+                drawArenaRing(center, 8.0, Color.fromRGB(255, 215, 0));
+                drawArenaRing(center, 4.0, Color.WHITE);
 
-                // 2. Lunam Swords Storm (Menit 01:25)
-                if (ticks % 10 == 0) {
+                // Spawn Pedang Jatuh (Mirip Video)
+                if (ticks % 6 == 0) {
                     double angle = Math.random() * Math.PI * 2;
-                    double dist = Math.random() * 8.5;
-                    Location swordLoc = center.clone().add(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
-                    spawnFallingSword(swordLoc, p);
+                    double dist = Math.random() * 8.0;
+                    Location dropLoc = center.clone().add(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
+                    spawnLunarSword(dropLoc, p);
                 }
-
-                // 3. Lunam Souls (Menit 01:51)
-                if (ticks % 30 == 0) {
-                    spawnOrbitSoul(center);
-                }
-
                 ticks += 2;
             }
         }.runTaskTimer(plugin, 0L, 2L);
     }
 
-    private void drawCircle(Location loc, double radius, Color color) {
-        Particle.DustOptions dust = new Particle.DustOptions(color, 1.8f);
+    private void drawArenaRing(Location loc, double radius, Color col) {
+        Particle.DustOptions dust = new Particle.DustOptions(col, 1.8f);
         for (double i = 0; i < Math.PI * 2; i += 0.3) {
             double x = Math.cos(i) * radius;
             double z = Math.sin(i) * radius;
@@ -128,41 +125,28 @@ public class SkillListener implements Listener {
         }
     }
 
-    private void spawnFallingSword(Location loc, Player p) {
+    private void spawnLunarSword(Location loc, Player p) {
         new BukkitRunnable() {
-            double y = 10.0;
+            double y = 12.0;
             @Override
             public void run() {
-                loc.getWorld().spawnParticle(Particle.END_ROD, loc.clone().add(0, y, 0), 2, 0, 0, 0, 0.01);
+                // Beam pedang (Putih)
+                loc.getWorld().spawnParticle(Particle.END_ROD, loc.clone().add(0, y, 0), 2, 0.05, 0.5, 0.05, 0.01);
                 y -= 1.5;
+                
                 if (y <= 0) {
                     loc.getWorld().spawnParticle(Particle.EXPLOSION, loc, 1, 0, 0, 0, 0);
-                    loc.getWorld().playSound(loc, Sound.BLOCK_GLASS_BREAK, 1f, 1.2f);
+                    loc.getWorld().playSound(loc, Sound.BLOCK_ANVIL_LAND, 0.5f, 1.8f);
                     
-                    // Damage musuh di titik jatuh
-                    for (Entity en : loc.getWorld().getNearbyEntities(loc, 2, 2, 2)) {
+                    // Damage Area
+                    for (Entity en : loc.getWorld().getNearbyEntities(loc, 2.5, 2.5, 2.5)) {
                         if (en instanceof LivingEntity le && en != p) {
-                            le.damage(6.0, p);
-                            le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 1));
+                            le.damage(8.0, p);
+                            le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 2));
                         }
                     }
                     this.cancel();
                 }
-            }
-        }.runTaskTimer(plugin, 0L, 1L);
-    }
-
-    private void spawnOrbitSoul(Location center) {
-        new BukkitRunnable() {
-            double angle = 0;
-            int time = 0;
-            @Override
-            public void run() {
-                angle += 0.2;
-                double x = Math.cos(angle) * 4.0;
-                double z = Math.sin(angle) * 4.0;
-                center.getWorld().spawnParticle(Particle.WAX_OFF, center.clone().add(x, 1, z), 1, 0, 0, 0, 0);
-                if (time++ > 50) this.cancel();
             }
         }.runTaskTimer(plugin, 0L, 1L);
     }
