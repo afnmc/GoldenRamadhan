@@ -17,8 +17,6 @@ public class SkillListener implements Listener {
     private final GoldenMoon plugin;
     private final Map<UUID, Integer> comboStack = new HashMap<>();
     private final Map<UUID, BukkitRunnable> domainRunnables = new HashMap<>();
-    private final Map<UUID, UUID> activeDomainOwner = new HashMap<>();
-    private final Set<UUID> playersWithBuffs = new HashSet<>();
 
     public SkillListener(GoldenMoon plugin) {
         this.plugin = plugin;
@@ -48,28 +46,25 @@ public class SkillListener implements Listener {
         Vector right = new Vector(-dir.getZ(), 0, dir.getX()).normalize();
         
         double radius = 0.6; 
-        // FIX: Gunakan Color.fromRGB, bukan new Color
-        Color particleColor = stack >= 5 ? Color.WHITE : Color.fromRGB(255, 200, 0);
-        Particle.DustOptions dustOptions = new Particle.DustOptions(particleColor, 1.5f);
+        Color col = stack >= 5 ? Color.WHITE : Color.fromRGB(255, 215, 0);
+        Particle.DustOptions dust = new Particle.DustOptions(col, 1.2f);
 
         for (double t = -1.5; t <= 1.5; t += 0.4) { 
             double taper = Math.cos(t / 2.0);
             double rx = (Math.cos(t) * taper * Math.cos(rot)) - (Math.sin(t) * Math.sin(rot));
             double ry = (Math.cos(t) * taper * Math.sin(rot)) + (Math.sin(t) * Math.cos(rot));
-            
             Location pLoc = loc.clone().add(right.clone().multiply(rx * radius)).add(0, ry * radius, 0);
-            p.getWorld().spawnParticle(Particle.DUST, pLoc, 1, 0, 0, 0, 0, dustOptions);
+            p.getWorld().spawnParticle(Particle.DUST, pLoc, 1, 0, 0, 0, 0, dust);
         }
     }
 
     private void drawSideStack(Player p, int stack) {
         Location loc = p.getLocation().add(0, 0.8, 0);
-        // FIX: Color.fromRGB
-        Particle.DustOptions dustOptions = new Particle.DustOptions(Color.fromRGB(255, 200, 0), 1.2f);
+        Particle.DustOptions dust = new Particle.DustOptions(Color.fromRGB(255, 255, 200), 1.0f);
         for (int i = 0; i < stack; i++) {
             double side = (i % 2 == 0) ? 0.7 : -0.7;
             Vector v = p.getLocation().getDirection().getCrossProduct(new Vector(0,1,0)).normalize().multiply(side);
-            p.getWorld().spawnParticle(Particle.DUST, loc.clone().add(v), 1, 0, 0, 0, 0, dustOptions);
+            p.getWorld().spawnParticle(Particle.DUST, loc.clone().add(v), 1, 0, 0, 0, 0, dust);
         }
     }
 
@@ -85,9 +80,8 @@ public class SkillListener implements Listener {
         comboStack.put(p.getUniqueId(), stack);
 
         if (stack == 5) {
-            p.sendTitle("", "§f§l● LUNAR READY ●", 0, 10, 5);
+            p.sendTitle("", "§f§l● LUNAR CHARGED ●", 0, 10, 5);
             p.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 2f);
-            startGroundDomain(p);
         }
     }
 
@@ -95,117 +89,75 @@ public class SkillListener implements Listener {
     public void onSneak(PlayerToggleSneakEvent e) {
         Player p = e.getPlayer();
         if (!isHolding(p) || !e.isSneaking()) return;
+        
         int stack = comboStack.getOrDefault(p.getUniqueId(), 0);
 
-        if (stack >= 5) {
+        // LOGIC: Harus 5 stack DAN sedang melompat (tidak di tanah)
+        if (stack >= 5 && !((Entity)p).isOnGround()) {
             comboStack.put(p.getUniqueId(), 0);
-            stopGroundDomain(p);
-            executeLunarUlti(p);
+            startLunarDomain(p);
         }
     }
 
-    private void startGroundDomain(Player activator) {
-        UUID activatorId = activator.getUniqueId();
-        Location center = activator.getLocation();
-        if (domainRunnables.containsKey(activatorId)) stopGroundDomain(activator);
-        
-        activeDomainOwner.put(activatorId, activatorId);
-        applyOwnerBuffs(activator);
-        playersWithBuffs.add(activatorId);
+    private void startLunarDomain(Player p) {
+        Location center = p.getLocation().clone();
+        p.playSound(center, Sound.ENTITY_WARDEN_SONIC_BOOM, 1f, 1.2f);
+        p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 160, 1));
+        p.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, 160, 0));
 
-        BukkitRunnable domainTask = new BukkitRunnable() {
+        new BukkitRunnable() {
             int ticks = 0;
             @Override
             public void run() {
-                if (!activator.isOnline() || comboStack.getOrDefault(activatorId, 0) < 5 || ticks > 100) {
-                    this.cancel();
-                    cleanupDomain(activatorId);
-                    return;
+                if (ticks > 100) { this.cancel(); return; }
+
+                // 1. Lingkaran Arena (Kuning & Putih)
+                drawCircle(center, 8.0, Color.fromRGB(255, 215, 0));
+                drawCircle(center, 4.0, Color.WHITE);
+
+                // 2. Efek Pedang Jatuh (Sesuai Video)
+                if (ticks % 10 == 0) {
+                    double angle = Math.random() * Math.PI * 2;
+                    double dist = Math.random() * 7.0;
+                    Location swordLoc = center.clone().add(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
+                    spawnLunarSword(swordLoc);
+                    
+                    // Damage musuh di arena
+                    for (Entity en : swordLoc.getWorld().getNearbyEntities(swordLoc, 2, 2, 2)) {
+                        if (en instanceof LivingEntity le && en != p) {
+                            le.damage(4.0, p);
+                            le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 1));
+                        }
+                    }
                 }
-                drawDomainEffects(center, activatorId, ticks);
-                applyDebuffsToEnemies(center, activator, 15.0);
-                if (ticks % 20 == 0) applyOwnerBuffs(activator);
-                ticks += 1;
+                ticks += 2;
             }
-        };
-        domainTask.runTaskTimer(plugin, 0L, 1L);
-        domainRunnables.put(activatorId, domainTask);
+        }.runTaskTimer(plugin, 0L, 2L);
     }
 
-    private void drawDomainEffects(Location center, UUID ownerId, int ticks) {
-        double radius = 15.0;
-        // FIX: Color.fromRGB
-        Particle.DustOptions domainDust = new Particle.DustOptions(Color.fromRGB(255, 220, 50), 2.0f);
-        for (double i = 0; i < Math.PI * 2; i += 0.15) {
+    private void drawCircle(Location loc, double radius, Color color) {
+        Particle.DustOptions dust = new Particle.DustOptions(color, 1.5f);
+        for (double i = 0; i < Math.PI * 2; i += 0.4) {
             double x = Math.cos(i) * radius;
             double z = Math.sin(i) * radius;
-            center.getWorld().spawnParticle(Particle.DUST, center.clone().add(x, 0.05, z), 1, 0, 0, 0, 0, domainDust);
-        }
-        drawLargeCrescent(center, ticks);
-    }
-
-    private void drawLargeCrescent(Location loc, int ticks) {
-        Color yellow = Color.fromRGB(255, 200, 0);
-        double pulse = 1.0 + Math.sin(ticks * 0.15) * 0.1;
-        for (double t = -1.5; t <= 1.5; t += 0.08) {
-            double taper = Math.cos(t / 2.0);
-            double x1 = Math.cos(t) * taper * 7.0 * pulse;
-            double z1 = Math.sin(t) * 7.0 * pulse;
-            loc.getWorld().spawnParticle(Particle.DUST, loc.clone().add(x1 - 3.0, 0.05, z1), 1, 0, 0, 0, 0, new Particle.DustOptions(yellow, 3.0f));
+            loc.getWorld().spawnParticle(Particle.DUST, loc.clone().add(x, 0.1, z), 1, 0, 0, 0, 0, dust);
         }
     }
 
-    private void applyOwnerBuffs(Player owner) {
-        // FIX: Nama PotionEffectType di 1.21.1
-        owner.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 25, 0, false, false));
-        owner.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, 25, 0, false, false));
-        owner.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 25, 0, false, false));
-        owner.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 25, 0, false, false));
-    }
-
-    private void applyDebuffsToEnemies(Location center, Player owner, double radius) {
-        for (Entity entity : owner.getWorld().getNearbyEntities(center, radius, radius, radius)) {
-            if (entity instanceof Player enemy && enemy != owner) {
-                // FIX: SLOWNESS, bukan SLOW
-                enemy.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 25, 0, false, false));
-                enemy.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 25, 0, false, false));
-                // FIX: SMOKE, bukan SMOKE_NORMAL
-                enemy.spawnParticle(Particle.SMOKE, enemy.getLocation().add(0, 1, 0), 3, 0.3, 0.3, 0.3, 0.02);
+    private void spawnLunarSword(Location loc) {
+        new BukkitRunnable() {
+            double y = 10.0;
+            @Override
+            public void run() {
+                loc.getWorld().spawnParticle(Particle.END_ROD, loc.clone().add(0, y, 0), 5, 0.1, 0.5, 0.1, 0.01);
+                y -= 1.0;
+                if (y <= 0) {
+                    loc.getWorld().spawnParticle(Particle.EXPLOSION, loc, 1, 0, 0, 0, 0);
+                    loc.getWorld().playSound(loc, Sound.BLOCK_GLASS_BREAK, 1f, 1.5f);
+                    this.cancel();
+                }
             }
-        }
-    }
-
-    private void cleanupDomain(UUID playerId) {
-        domainRunnables.remove(playerId);
-        activeDomainOwner.remove(playerId);
-        Player owner = Bukkit.getPlayer(playerId);
-        if (owner != null) {
-            owner.removePotionEffect(PotionEffectType.SPEED);
-            owner.removePotionEffect(PotionEffectType.STRENGTH);
-            owner.removePotionEffect(PotionEffectType.ABSORPTION);
-            owner.removePotionEffect(PotionEffectType.REGENERATION);
-        }
-    }
-
-    private void stopGroundDomain(Player p) {
-        BukkitRunnable task = domainRunnables.remove(p.getUniqueId());
-        if (task != null) task.cancel();
-        cleanupDomain(p.getUniqueId());
-    }
-
-    private void executeLunarUlti(Player p) {
-        Location center = p.getLocation();
-        p.playSound(center, Sound.ENTITY_WARDEN_SONIC_BOOM, 1.5f, 1.2f);
-        
-        for (Entity en : p.getNearbyEntities(15, 15, 15)) {
-            if (en instanceof LivingEntity le && en != p) {
-                le.getWorld().spawnParticle(Particle.SONIC_BOOM, le.getLocation().add(0, 1, 0), 1, 0, 0, 0, 0);
-                // FIX: EXPLOSION, bukan EXPLOSION_LARGE
-                le.getWorld().spawnParticle(Particle.EXPLOSION, le.getLocation(), 1, 0.5, 0.5, 0.5, 0.1);
-                le.damage(22, p);
-                le.setVelocity(new Vector(0, 1.2, 0));
-            }
-        }
+        }.runTaskTimer(plugin, 0L, 1L);
     }
 
     private boolean isHolding(Player p) {
