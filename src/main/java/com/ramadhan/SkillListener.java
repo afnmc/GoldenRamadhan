@@ -16,12 +16,13 @@ import java.util.*;
 public class SkillListener implements Listener {
     private final GoldenMoon plugin;
     
-    // Data Store buat Skill
+    // Data Store untuk mekanik skill
     private final Map<UUID, Integer> chargeStack = new HashMap<>();
     private final Set<UUID> aeternaMarked = new HashSet<>();
 
     public SkillListener(GoldenMoon plugin) {
         this.plugin = plugin;
+        // Jalankan Skill 4: Lunam Souls secara pasif
         startLunamSoulsTask();
     }
 
@@ -34,30 +35,33 @@ public class SkillListener implements Listener {
 
         // --- SKILL 1: IMPERATORIS LUNA (300% Damage Mark) ---
         if (aeternaMarked.contains(targetUUID)) {
-            e.setDamage(e.getDamage() * 3.0); // Triple damage!
+            // Berikan damage 3x lipat jika musuh sudah ditandai
+            e.setDamage(e.getDamage() * 3.0); 
             target.getWorld().spawnParticle(Particle.SOUL, target.getLocation().add(0, 1.2, 0), 3, 0.1, 0.1, 0.1, 0.05);
         } else {
-            // Kasih Mark & Visual Garis Energi
+            // Tandai musuh dan buat garis energi biru (AQUA)
             aeternaMarked.add(targetUUID);
             drawLunamLink(p, target);
+            p.sendMessage("§b§l[MARK] §fAeterna Lunam Mark applied to target!");
         }
 
         // --- SKILL 2: LUNAM BLADE (Charge & Slide Back) ---
         int stack = chargeStack.getOrDefault(p.getUniqueId(), 0) + 1;
         
-        // Trigger: Pas hit ke-3 sambil Shift (Jongkok)
+        // Trigger: Saat hit ke-3 sambil Shift (Jongkok)
         if (p.isSneaking() && stack >= 3) {
             executeLunamSlide(p);
-            chargeStack.put(p.getUniqueId(), 0); // Reset
+            chargeStack.put(p.getUniqueId(), 0); // Reset stack setelah slide
         } else {
             chargeStack.put(p.getUniqueId(), stack);
+            if (stack == 3) p.sendTitle("", "§e§lCHARGE READY", 0, 10, 5);
         }
         
-        // Visual Hit (Kuning-Putih)
+        // Visual Hit Bling-bling (Kuning-Putih)
         target.getWorld().spawnParticle(Particle.FLASH, target.getLocation().add(0, 1, 0), 1);
     }
 
-    // --- SKILL 2 LOGIC: SLIDE BACK & SNAP ---
+    // --- LOGIC SKILL 2: SLIDE BACK & SNAP ---
     private void executeLunamSlide(Player p) {
         Location startPos = p.getLocation().clone();
         Vector backward = p.getLocation().getDirection().setY(0).normalize().multiply(-1.5);
@@ -70,10 +74,11 @@ public class SkillListener implements Listener {
             @Override
             public void run() {
                 if (timer > 10) {
-                    // SNAP BACK: Kalau masih nahan Shift di akhir slide, balik ke awal
+                    // SNAP BACK: Jika masih menahan Shift di akhir slide, kembali ke posisi awal
                     if (p.isSneaking()) {
                         p.teleport(startPos);
                         p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1.5f);
+                        p.getWorld().spawnParticle(Particle.FLASH, p.getLocation(), 3);
                     }
                     this.cancel();
                     return;
@@ -93,8 +98,9 @@ public class SkillListener implements Listener {
         Player p = e.getPlayer();
         if (!isHolding(p) || !e.getAction().name().contains("RIGHT")) return;
         
+        // Cari lokasi yang dilihat player (max 10 blok)
         Location targetLoc = p.getTargetBlock(null, 10).getLocation();
-        p.sendMessage("§b§lSWORD STORM!");
+        p.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 2f);
 
         new BukkitRunnable() {
             int count = 0;
@@ -106,13 +112,13 @@ public class SkillListener implements Listener {
                 double z = (Math.random() * 6) - 3;
                 Location dropLoc = targetLoc.clone().add(x, 8, z);
                 
-                // Visual Pedang Jatuh (End Rod)
-                dropLoc.getWorld().spawnParticle(Particle.END_ROD, dropLoc, 10, 0, -2, 0, 0.5);
+                // Visual Pedang Jatuh (End Rod Putih)
+                dropLoc.getWorld().spawnParticle(Particle.END_ROD, dropLoc, 10, 0.1, -2, 0.1, 0.5);
                 
-                // Damage & Slow di titik jatuh
-                for (Entity en : dropLoc.getWorld().getNearbyEntities(dropLoc.clone().subtract(0, 8, 0), 2, 2, 2)) {
+                // Damage & Slow di area jatuhnya pedang
+                for (Entity en : dropLoc.getWorld().getNearbyEntities(dropLoc.clone().subtract(0, 8, 0), 2, 4, 2)) {
                     if (en instanceof LivingEntity le && en != p) {
-                        le.damage(5.0, p);
+                        le.damage(4.0, p);
                         le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 1));
                     }
                 }
@@ -121,7 +127,7 @@ public class SkillListener implements Listener {
         }.runTaskTimer(plugin, 0L, 2L);
     }
 
-    // --- SKILL 4: LUNAM SOULS (Passive Auto-Attack) ---
+    // --- SKILL 4: LUNAM SOULS (Passive Auto-Attack tiap 3 detik) ---
     private void startLunamSoulsTask() {
         new BukkitRunnable() {
             @Override
@@ -129,17 +135,18 @@ public class SkillListener implements Listener {
                 for (Player p : Bukkit.getOnlinePlayers()) {
                     if (!isHolding(p)) continue;
                     
-                    // Cari musuh terdekat buat ditembak "Soul"
+                    // Otomatis serang 1 musuh terdekat dalam radius 7 blok
                     p.getNearbyEntities(7, 7, 7).stream()
                         .filter(en -> en instanceof LivingEntity && en != p)
                         .findFirst().ifPresent(target -> {
-                            p.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, p.getLocation().add(0, 1, 0), 5);
+                            p.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, p.getLocation().add(0, 1.2, 0), 8, 0.2, 0.2, 0.2, 0.05);
                             ((LivingEntity) target).damage(3.0, p);
-                            p.playSound(p.getLocation(), Sound.ENTITY_WISP_AMBIENT, 0.5f, 2f);
+                            // FIXED SOUND: Menggunakan sound yang pasti ada di 1.21.1
+                            p.playSound(p.getLocation(), Sound.PARTICLE_SOUL_ESCAPE, 0.5f, 2f);
                         });
                 }
             }
-        }.runTaskTimer(plugin, 0L, 60L); // Tiap 3 detik
+        }.runTaskTimer(plugin, 0L, 60L); // 60 ticks = 3 detik
     }
 
     private void drawLunamLink(Player p, Entity target) {
