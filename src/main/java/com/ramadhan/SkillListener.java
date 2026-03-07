@@ -5,7 +5,9 @@ import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.event.*;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
@@ -20,7 +22,7 @@ public class SkillListener implements Listener {
     
     private final Map<UUID, Integer> chargeStack = new HashMap<>();
     private final Map<UUID, Long> healCooldown = new HashMap<>();
-    private final Map<UUID, Long> holdStart = new HashMap<>();
+    private final Map<UUID, Long> clickHoldStart = new HashMap<>();
     private final Set<UUID> aeternaMarked = new HashSet<>();
 
     public SkillListener(GoldenMoon plugin) {
@@ -36,7 +38,7 @@ public class SkillListener implements Listener {
         UUID uuid = p.getUniqueId();
         UUID targetUUID = target.getUniqueId();
 
-        // --- PASIF 1: IMPERATORIS LUNA (300% Damage Mark) ---
+        // --- PASIF: MARKING 300% ---
         if (aeternaMarked.contains(targetUUID)) {
             e.setDamage(e.getDamage() * 3.0);
             target.getWorld().spawnParticle(Particle.SOUL, target.getLocation().add(0, 1, 0), 3);
@@ -45,7 +47,7 @@ public class SkillListener implements Listener {
             drawLink(p, target, Color.YELLOW);
         }
 
-        // --- SKILL: ZIG-ZAG DASH (HIT + LOMPAT) ---
+        // --- SKILL: ZIG-ZAG (LOMPAT + HIT) ---
         if (!p.isOnGround() && !p.isSneaking()) {
             executeZigZagDash(p, target);
             return;
@@ -56,37 +58,78 @@ public class SkillListener implements Listener {
         if (stack < 5) {
             stack++;
             chargeStack.put(uuid, stack);
-            // FIX: Menggunakan Bungee API agar tidak error saat compile
             p.spigot().sendMessage(ChatMessageType.ACTION_BAR, 
                 new TextComponent("§e§lGolden Stack: §f" + stack + "/5"));
         }
 
-        // --- SKILL: MAJU MUNDUR (HIT KE-3 + SNEAKING) ---
+        // --- SKILL: MAJU MUNDUR (HIT 3 + SNEAK) ---
         if (p.isSneaking() && stack == 3) {
             executeMajuMundur(p);
         }
     }
 
+    // --- SKILL: ULTI LEDAKAN BESAR (KLIK KANAN TAHAN) ---
+    @EventHandler
+    public void onRightClickHold(PlayerInteractEvent e) {
+        Player p = e.getPlayer();
+        UUID uuid = p.getUniqueId();
+        
+        if (!isHolding(p) || chargeStack.getOrDefault(uuid, 0) < 5) return;
+
+        // Pas mulai Klik Kanan
+        if (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            if (!clickHoldStart.containsKey(uuid)) {
+                clickHoldStart.put(uuid, System.currentTimeMillis());
+                p.sendTitle("", "§e§lCHARGING ULTIMATE...", 0, 15, 0);
+                p.playSound(p.getLocation(), Sound.BLOCK_BEACON_POWER_SELECT, 1f, 1f);
+            }
+        }
+        
+        // Logika ngetrigger pas dilepas (Gue pake scheduler buat ngecek kalau udah gak nahan)
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!p.isHandRaised() && clickHoldStart.containsKey(uuid)) {
+                    long duration = System.currentTimeMillis() - clickHoldStart.get(uuid);
+                    if (duration >= 1000) { // Tahan 1 detik
+                        executeBigExplosion(p);
+                        chargeStack.put(uuid, 0);
+                    }
+                    clickHoldStart.remove(uuid);
+                    this.cancel();
+                }
+            }
+        }.runTaskTimer(plugin, 1L, 1L);
+    }
+
+    @EventHandler
+    public void onHealSneak(PlayerToggleSneakEvent e) {
+        Player p = e.getPlayer();
+        if (!isHolding(p) || !e.isSneaking()) return;
+
+        // --- HEAL (DC 10S) ---
+        long now = System.currentTimeMillis();
+        if (now - healCooldown.getOrDefault(p.getUniqueId(), 0L) > 10000) {
+            p.addPotionEffect(new PotionEffect(PotionEffectType.INSTANT_HEALTH, 1, 0));
+            p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, p.getLocation(), 10, 0.5, 0.5, 0.5, 0.1);
+            healCooldown.put(p.getUniqueId(), now);
+        }
+    }
+
     private void executeMajuMundur(Player p) {
         Vector dir = p.getLocation().getDirection().setY(0).normalize();
-        p.setVelocity(dir.clone().multiply(-1.5)); // Mundur
+        p.setVelocity(dir.clone().multiply(-1.5));
 
         new BukkitRunnable() {
             int i = 0;
             @Override
             public void run() {
-                // TRAIL LEBIH BESAR (Kuning & Putih)
                 Location loc = p.getLocation().add(0, 0.5, 0);
                 p.getWorld().spawnParticle(Particle.DUST, loc, 15, 0.3, 0.3, 0.3, new Particle.DustOptions(Color.YELLOW, 2.0f));
-                p.getWorld().spawnParticle(Particle.DUST, loc, 10, 0.2, 0.2, 0.2, new Particle.DustOptions(Color.WHITE, 1.5f));
-                
-                damageArea(p, 5.0, 3.5); // Damage di sekitar jalur gerak
-                
+                damageArea(p, 5.0, 3.5);
                 if (i == 8) {
-                    // MAJU + LEDAKAN KECIL
                     p.setVelocity(dir.multiply(2.5));
                     p.getWorld().spawnParticle(Particle.FLASH, p.getLocation(), 2);
-                    p.playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.5f, 2f);
                     this.cancel();
                 }
                 i++;
@@ -95,11 +138,10 @@ public class SkillListener implements Listener {
     }
 
     private void executeBigExplosion(Player p) {
-        // LEDAKAN EMAS PUTIH (MAIN ARENA)
         p.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, p.getLocation(), 3);
         p.getWorld().spawnParticle(Particle.FLASH, p.getLocation(), 20, 2, 2, 2, 0.1);
-        p.getWorld().spawnParticle(Particle.DUST, p.getLocation(), 100, 3, 1, 3, new Particle.DustOptions(Color.YELLOW, 2.2f));
-        p.playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1.2f, 0.5f);
+        p.getWorld().spawnParticle(Particle.DUST, p.getLocation(), 100, 3, 1, 3, new Particle.DustOptions(Color.YELLOW, 2.5f));
+        p.playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1.5f, 0.5f);
         
         for (Entity en : p.getNearbyEntities(6, 6, 6)) {
             if (en instanceof LivingEntity le && en != p) {
@@ -116,17 +158,14 @@ public class SkillListener implements Listener {
         for (Entity en : firstTarget.getNearbyEntities(8, 4, 8)) {
             if (en instanceof LivingEntity le && en != p && targets.size() < 3) targets.add(le);
         }
-
         new BukkitRunnable() {
             int idx = 0;
             Location lastPos = p.getLocation();
             @Override
             public void run() {
                 if (idx >= targets.size()) {
-                    // FINISH: Berakhir di belakang target terakhir
                     LivingEntity last = targets.get(targets.size()-1);
                     p.teleport(last.getLocation().add(last.getLocation().getDirection().multiply(-1.2)));
-                    p.getWorld().spawnParticle(Particle.FLASH, p.getLocation(), 1);
                     this.cancel();
                     return;
                 }
@@ -138,57 +177,6 @@ public class SkillListener implements Listener {
                 idx++;
             }
         }.runTaskTimer(plugin, 0L, 3L);
-    }
-
-    @EventHandler
-    public void onSneak(PlayerToggleSneakEvent e) {
-        Player p = e.getPlayer();
-        UUID uuid = p.getUniqueId();
-        if (!isHolding(p)) return;
-
-        if (e.isSneaking()) {
-            // --- HEAL SYSTEM (10S COOLDOWN) ---
-            long now = System.currentTimeMillis();
-            if (now - healCooldown.getOrDefault(uuid, 0L) > 10000) {
-                p.addPotionEffect(new PotionEffect(PotionEffectType.INSTANT_HEALTH, 1, 0));
-                p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, p.getLocation(), 10, 0.5, 0.5, 0.5, 0.1);
-                healCooldown.put(uuid, now);
-            }
-
-            // --- CHARGING FOR STACK 5 ---
-            if (chargeStack.getOrDefault(uuid, 0) >= 5) {
-                holdStart.put(uuid, System.currentTimeMillis());
-                p.sendTitle("", "§e§lCHARGING BURST...", 0, 20, 0);
-            }
-        } else {
-            // --- RELEASE BIG EXPLOSION ---
-            if (holdStart.containsKey(uuid)) {
-                long duration = System.currentTimeMillis() - holdStart.get(uuid);
-                if (duration >= 1000 && chargeStack.getOrDefault(uuid, 0) >= 5) {
-                    executeBigExplosion(p);
-                    chargeStack.put(uuid, 0);
-                }
-                holdStart.remove(uuid);
-            }
-        }
-    }
-
-    private void startLunamSoulsTask() {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                for (Player p : Bukkit.getOnlinePlayers()) {
-                    if (!isHolding(p)) continue;
-                    p.getNearbyEntities(7, 7, 7).stream()
-                        .filter(en -> en instanceof LivingEntity && en != p)
-                        .findFirst().ifPresent(target -> {
-                            ((LivingEntity) target).damage(3.0, p);
-                            p.getWorld().spawnParticle(Particle.DUST, target.getLocation().add(0, 1, 0), 5, new Particle.DustOptions(Color.YELLOW, 1.2f));
-                            p.playSound(p.getLocation(), Sound.PARTICLE_SOUL_ESCAPE, 0.5f, 2f);
-                        });
-                }
-            }
-        }.runTaskTimer(plugin, 0L, 60L);
     }
 
     private void drawTrail(Location from, Location to, Color color) {
@@ -209,6 +197,23 @@ public class SkillListener implements Listener {
             start.add(vec);
             p.getWorld().spawnParticle(Particle.DUST, start, 1, new Particle.DustOptions(color, 0.8f));
         }
+    }
+
+    private void startLunamSoulsTask() {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    if (!isHolding(p)) continue;
+                    p.getNearbyEntities(7, 7, 7).stream()
+                        .filter(en -> en instanceof LivingEntity && en != p)
+                        .findFirst().ifPresent(target -> {
+                            ((LivingEntity) target).damage(3.0, p);
+                            p.getWorld().spawnParticle(Particle.DUST, target.getLocation().add(0, 1, 0), 5, new Particle.DustOptions(Color.YELLOW, 1.2f));
+                        });
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 60L);
     }
 
     private void damageArea(Player p, double dmg, double range) {
