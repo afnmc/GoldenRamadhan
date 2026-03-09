@@ -92,7 +92,6 @@ public class SkillListener implements Listener {
         Location start = p.getLocation().clone();
         target.setVelocity(new Vector(0, 0.8, 0));
         
-        // Copy ke final variable untuk inner class
         final Player finalP = p;
         final LivingEntity finalTarget = target;
         final World world = p.getWorld();
@@ -111,9 +110,9 @@ public class SkillListener implements Listener {
                 spawnGoldenParticles(behind, 20);
                 finalP.playSound(behind, Sound.ENTITY_ENDERMAN_TELEPORT, 0.7f, 2.2f);
                 
-                // Slash effect (multi-hit visual)
+                // Slash effect
                 for(int i = 0; i < 2; i++) {
-                    final int effectIndex = i; // final untuk inner class
+                    final int effectIndex = i;
                     new BukkitRunnable() {
                         @Override
                         public void run() {
@@ -122,7 +121,7 @@ public class SkillListener implements Listener {
                             world.spawnParticle(Particle.FLAME, hitLoc, 10, 0.2, 0.2, 0.2, 0);
                             world.spawnParticle(Particle.CLOUD, hitLoc, 8, 0.3, 0.3, 0.3, 0);
                             world.spawnParticle(Particle.DUST, hitLoc, 12, new Particle.DustOptions(Color.YELLOW, 1.5f));
-                            finalP.playSound(hitLoc, Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1f, 1.5f + effectIndex * 0.3f);
+                            world.playSound(hitLoc, Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1f, 1.5f + effectIndex * 0.3f);
                         }
                     }.runTaskLater(plugin, i * 4);
                 }
@@ -145,7 +144,6 @@ public class SkillListener implements Listener {
         final Player finalP = p;
         final World world = p.getWorld();
         
-        // FASE 1: Charge effect
         finalP.playSound(finalP.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 0.8f, 1.2f);
         for(int i = 0; i < 10; i++) {
             final int chargeIndex = i;
@@ -160,7 +158,6 @@ public class SkillListener implements Listener {
             }.runTaskLater(plugin, chargeIndex * 2);
         }
         
-        // FASE 2: DASH + SLASH
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -196,7 +193,7 @@ public class SkillListener implements Listener {
                         finalP.playSound(finalP.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1.3f, 1.6f);
                         finalP.playSound(finalP.getLocation(), Sound.BLOCK_GLASS_BREAK, 0.7f, 1.4f);
                         
-                        // AOE Damage
+                        // AOE Damage - FIX: pakai world.playSound, bukan le.playSound
                         world.getNearbyEntities(finalP.getLocation(), 3.5, 2.5, 3.5).forEach(en -> {
                             if (en instanceof LivingEntity le && !en.equals(finalP)) {
                                 le.damage(11.0, finalP);
@@ -204,7 +201,8 @@ public class SkillListener implements Listener {
                                 le.setFireTicks(40);
                                 spawnGoldenParticles(le.getLocation().add(0, 1, 0), 12);
                                 le.getWorld().spawnParticle(Particle.CRIT, le.getLocation().add(0, 1, 0), 15, 0.3, 0.3, 0.3, 0.1);
-                                le.playSound(le.getLocation(), Sound.ENTITY_GENERIC_HURT, 1f, 1.4f);
+                                // FIX: world.playSound instead of le.playSound
+                                world.playSound(le.getLocation(), Sound.ENTITY_GENERIC_HURT, 1f, 1.4f);
                             }
                         });
                     }
@@ -261,7 +259,7 @@ public class SkillListener implements Listener {
         p.setVelocity(p.getLocation().getDirection().multiply(-2).setY(0.6));
         immunityFrame.add(p.getUniqueId());
         
-        // ArmorStand dengan Golden Sword (1.21+ compatible)
+        // ArmorStand dengan Golden Sword
         ArmorStand moonBlade = (ArmorStand) world.spawnEntity(
             center.clone().add(0, 20, 0),
             EntityType.ARMOR_STAND
@@ -318,11 +316,8 @@ public class SkillListener implements Listener {
                     world.spawnParticle(Particle.CRIT, center, 60, 5, 2, 5, 0.2);
                     world.spawnParticle(Particle.DUST, center, 30, new Particle.DustOptions(Color.ORANGE, 2.5f));
                     
-                    // Block crack (ground)
-                    world.spawnParticle(
-                        Particle.BLOCK_CRACK, center, 120, 6, 0.5, 6, 0.1,
-                        Bukkit.createBlockData(Material.GOLD_BLOCK)
-                    );
+                    // FIX: BLOCK_CRACK dengan fallback aman
+                    spawnBlockCrackEffect(center, Material.GOLD_BLOCK);
                     
                     // Lightning
                     for(int flash = 0; flash < 4; flash++) {
@@ -341,7 +336,7 @@ public class SkillListener implements Listener {
                     world.playSound(center, Sound.BLOCK_ANVIL_LAND, 2f, 0.4f);
                     world.playSound(center, Sound.ENTITY_WITHER_DEATH, 1.5f, 0.9f);
                     
-                    // AOE Damage
+                    // AOE Damage - FIX: world.playSound instead of le.playSound
                     world.getNearbyEntities(center, 11.0, 11.0, 11.0).forEach(en -> {
                         if (en instanceof LivingEntity le && !en.equals(finalP)) {
                             le.damage(40.0, finalP);
@@ -350,7 +345,8 @@ public class SkillListener implements Listener {
                             le.getWorld().spawnParticle(Particle.CRIT, le.getLocation().add(0, 1, 0), 25, 0.4, 0.4, 0.4, 0.1);
                             le.getWorld().spawnParticle(Particle.FLAME, le.getLocation().add(0, 1, 0), 18, 0.3, 0.3, 0.3, 0.1);
                             le.getWorld().spawnParticle(Particle.DUST, le.getLocation().add(0, 1, 0), 10, new Particle.DustOptions(Color.YELLOW, 1.8f));
-                            le.playSound(le.getLocation(), Sound.ENTITY_GENERIC_HURT, 1f, 1.3f);
+                            // FIX: world.playSound instead of le.playSound
+                            world.playSound(le.getLocation(), Sound.ENTITY_GENERIC_HURT, 1f, 1.3f);
                         }
                     });
                     
@@ -395,6 +391,24 @@ public class SkillListener implements Listener {
     }
 
     // ==========================================
+    // 🔨 HELPER: Block Crack Effect (Safe)
+    // ==========================================
+    private void spawnBlockCrackEffect(Location loc, Material material) {
+        try {
+            // Coba pakai BLOCK_CRACK dengan BlockData (1.13+)
+            loc.getWorld().spawnParticle(
+                Particle.valueOf("BLOCK_CRACK"), 
+                loc, 120, 6, 0.5, 6, 0.1,
+                Bukkit.createBlockData(material)
+            );
+        } catch (IllegalArgumentException | NullPointerException e) {
+            // Fallback kalau BLOCK_CRACK tidak support
+            loc.getWorld().spawnParticle(Particle.CLOUD, loc, 80, 5, 1, 5, 0.1);
+            loc.getWorld().spawnParticle(Particle.FLAME, loc, 60, 4, 0.5, 4, 0.1);
+        }
+    }
+
+    // ==========================================
     // 📦 UTILS
     // ==========================================
     private void sendActionBar(Player p, String msg) {
@@ -406,4 +420,4 @@ public class SkillListener implements Listener {
         return item != null && item.hasItemMeta() && 
                item.getItemMeta().getPersistentDataContainer().has(plugin.SWORD_KEY, PersistentDataType.BYTE);
     }
-                    }
+                        }
