@@ -20,7 +20,7 @@ import java.util.*;
 
 /**
  * ============================================================================
- * GOLDEN MOON - SKILL LISTENER (v2.0 Furina Edition) - FIXED
+ * GOLDEN MOON - SKILL LISTENER (v2.1 Final Fixed)
  * Compatible: Minecraft 1.21.8 - 1.21.10
  * 
  * 🎭 GOLDEN DOMAIN (Ultimate):
@@ -29,34 +29,32 @@ import java.util.*;
  * - Debuff: SLOWNESS 255 (freeze) + DARKNESS ke SEMUA entity (termasuk user)
  * - Visual: Cahaya dari atas → Player TP mundur → Pedang raksasa turun → Impact elegan
  * - Damage: Scaling 10-35 HP berdasarkan % charge
- * 
- * ⚙️ CONFIGURABLE VALUES (cari komentar "🔧 CONFIG"):
  * ============================================================================
  */
 public class SkillListener implements Listener {
     
     // 🔧 CONFIG: GOLDEN DOMAIN SETTINGS
-    private static final double DOMAIN_MIN_RANGE = 4.0;      // Radius minimal (30% charge)
-    private static final double DOMAIN_MAX_RANGE = 10.0;     // Radius maksimal (100% charge)
-    private static final int DOMAIN_ROTATION_SPEED = 2;      // Derajat per tick putaran hexagon
-    private static final double DOMAIN_HEIGHT = 2.5;         // Ketinggian arena dari tanah
-    private static final int CHARGE_TICKS_TO_FULL = 30;      // 30 tick = 1.5 detik untuk 100%
-    private static final double SWORD_DESCENT_SPEED = 0.6;   // Kecepatan pedang turun (blok per tick)
-    private static final double SWORD_SIZE = 4.0;            // Ukuran visual pedang
-    private static final int DOMAIN_FREEZE_DURATION = 60;    // Durasi freeze (3 detik)
-    private static final int DOMAIN_DARKNESS_DURATION = 80;  // Durasi darkness (4 detik)
+    private static final double DOMAIN_MIN_RANGE = 4.0;
+    private static final double DOMAIN_MAX_RANGE = 10.0;
+    private static final int DOMAIN_ROTATION_SPEED = 2;
+    private static final double DOMAIN_HEIGHT = 2.5;
+    private static final int CHARGE_TICKS_TO_FULL = 30;
+    private static final double SWORD_DESCENT_SPEED = 0.6;
+    private static final double SWORD_SIZE = 4.0;
+    private static final int DOMAIN_FREEZE_DURATION = 60;
+    private static final int DOMAIN_DARKNESS_DURATION = 80;
     
     // 🔧 CONFIG: ANIME BLINK SETTINGS
-    private static final double BLINK_HORIZONTAL_SPREAD = 2.2;  // Sebaran horizontal enemy
-    private static final double BLINK_VERTICAL_BOOST = 1.1;     // Ketinggian lompatan enemy
-    private static final int BLINK_DAMAGE = 8;                  // Damage per hit
-    private static final int BLINK_MAX_TARGETS = 3;             // Maksimal target yang di-blink
+    private static final double BLINK_HORIZONTAL_SPREAD = 2.2;
+    private static final double BLINK_VERTICAL_BOOST = 1.1;
+    private static final int BLINK_DAMAGE = 8;
+    private static final int BLINK_MAX_TARGETS = 3;
     
     // 🔧 CONFIG: MAJU MUNDUR SETTINGS
-    private static final double MM_BACKWARD_MULTIPLIER = -2.0;  // Kekuatan mundur
-    private static final double MM_FORWARD_MULTIPLIER = 3.5;    // Kekuatan menerjang
-    private static final double MM_DAMAGE = 12.0;               // Damage saat menerjang
-    private static final int MM_DELAY_TICKS = 8;                // Delay antara mundur → maju
+    private static final double MM_BACKWARD_MULTIPLIER = -2.0;
+    private static final double MM_FORWARD_MULTIPLIER = 3.5;
+    private static final double MM_DAMAGE = 12.0;
+    private static final int MM_DELAY_TICKS = 8;
     
     private final GoldenMoon plugin;
     private final Map<UUID, Integer> chargeStack = new HashMap<>();
@@ -69,7 +67,7 @@ public class SkillListener implements Listener {
     }
 
     // ========================================================================
-    // EVENT: FALL DAMAGE PROTECTION (untuk Blink & Domain)
+    // EVENT: FALL DAMAGE PROTECTION
     // ========================================================================
     @EventHandler(ignoreCancelled = true)
     public void onFallDamage(EntityDamageEvent e) {
@@ -93,7 +91,7 @@ public class SkillListener implements Listener {
         UUID uuid = p.getUniqueId();
         int stack = chargeStack.getOrDefault(uuid, 0);
 
-        // ── STACKING SYSTEM (selalu jalan duluan) ──
+        // ── STACKING SYSTEM ──
         if (stack < 5) {
             stack++;
             chargeStack.put(uuid, stack);
@@ -104,7 +102,7 @@ public class SkillListener implements Listener {
             }
         }
 
-        // ── SKILL 2: MAJU MUNDUR (Stack 3 + Sneak + Hit) ──
+        // ── SKILL 2: MAJU MUNDUR ──
         if (p.isSneaking() && stack == 3) {
             executeMajuMundur(p);
             chargeStack.put(uuid, 0);
@@ -112,7 +110,7 @@ public class SkillListener implements Listener {
             return;
         }
 
-        // ── SKILL 1: ANIME BLINK (Sneak + Hit, Stack < 3) ──
+        // ── SKILL 1: ANIME BLINK ──
         if (p.isSneaking() && stack < 3) {
             executeAnimeBlink(p, target);
             sendActionBar(p, "§d§l✦ Anime Blink!");
@@ -133,7 +131,7 @@ public class SkillListener implements Listener {
             e.setCancelled(true);
             
             UUID uuid = p.getUniqueId();
-            if (clickHoldStart.containsKey(uuid)) return; // Already charging
+            if (clickHoldStart.containsKey(uuid)) return;
             
             clickHoldStart.put(uuid, System.currentTimeMillis());
             startChargingDomain(p);
@@ -151,7 +149,6 @@ public class SkillListener implements Listener {
         new BukkitRunnable() {
             @Override
             public void run() {
-                // Cancel jika player ganti item / mati / logout
                 if (!isHolding(p) || !p.isOnline() || !clickHoldStart.containsKey(uuid)) {
                     finishCharging(p, startTime, false);
                     this.cancel();
@@ -161,34 +158,41 @@ public class SkillListener implements Listener {
                 long elapsed = System.currentTimeMillis() - startTime;
                 int progress = (int) Math.min((elapsed * 100L) / (CHARGE_TICKS_TO_FULL * 50L), 100);
                 
-                // ── VISUAL: Partikel menyedot ke pusat (Furina style: aqua + white) ──
-                Location center = p.getLocation().clone().add(0, 1.2, 0); // FIX: clone() before add()
+                // ── VISUAL: Partikel menyedot ke pusat ──
+                // FIX #328: Gunakan constructor baru, hindari chaining mutator
+                Location playerLoc = p.getLocation();
+                Location center = new Location(
+                    playerLoc.getWorld(),
+                    playerLoc.getX(),
+                    playerLoc.getY() + 1.2,
+                    playerLoc.getZ()
+                );
+                
                 double radius = 3.0 - (2.5 * (progress / 100.0));
                 
                 for (int i = 0; i < 5; i++) {
                     double angle = (Math.PI * 2 / 5) * i + (elapsed / 200.0);
-                    Location partLoc = center.clone().add(
-                        Math.cos(angle) * radius,
-                        (Math.sin(elapsed / 100.0 + i) * 0.8),
-                        Math.sin(angle) * radius
-                    );
-                    // Partikel aqua elegan
+                    
+                    // FIX: Buat Location baru tanpa chaining add()
+                    double partX = center.getX() + Math.cos(angle) * radius;
+                    double partY = center.getY() + (Math.sin(elapsed / 100.0 + i) * 0.8);
+                    double partZ = center.getZ() + Math.sin(angle) * radius;
+                    Location partLoc = new Location(p.getWorld(), partX, partY, partZ);
+                    
                     p.getWorld().spawnParticle(Particle.DUST, partLoc, 1, 
                         new Particle.DustOptions(Color.fromRGB(100, 200, 255), 1.2f));
-                    // Partikel spark putih
+                    
                     if (progress > 50) {
                         p.getWorld().spawnParticle(Particle.FLASH, partLoc, 0);
                     }
                 }
                 
-                // Sound charging bertahap
                 if (progress % 25 == 0 && progress > 0) {
                     p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_STEP, 0.5f, 1f + (progress/50f));
                 }
                 
                 sendActionBar(p, "§f§l✦ Charging Domain: §b" + progress + "%");
                 
-                // Auto-exec di 100% (karena sulit deteksi release click)
                 if (progress >= 100) {
                     executeGoldenDomain(p, 100);
                     clickHoldStart.remove(uuid);
@@ -196,7 +200,7 @@ public class SkillListener implements Listener {
                     this.cancel();
                 }
             }
-        }.runTaskTimer(plugin, 0L, 1L); // 1 tick = 50ms, smooth charging
+        }.runTaskTimer(plugin, 0L, 1L);
     }
 
     private void finishCharging(Player p, long startTime, boolean success) {
@@ -217,52 +221,57 @@ public class SkillListener implements Listener {
     }
 
     // ========================================================================
-    // ⚡ ULTIMATE: GOLDEN DOMAIN (FURINA STYLE)
+    // ⚡ ULTIMATE: GOLDEN DOMAIN
     // ========================================================================
     private void executeGoldenDomain(Player p, int progress) {
-        // 🔧 CONFIG: Range scaling linear 4.0 → 10.0
         double range = DOMAIN_MIN_RANGE + ((DOMAIN_MAX_RANGE - DOMAIN_MIN_RANGE) * (progress / 100.0));
         Location center = p.getLocation().clone();
         UUID uuid = p.getUniqueId();
         
-        // Sound start domain
         p.getWorld().playSound(center, Sound.BLOCK_AMETHYST_CLUSTER_HIT, 2f, 1.5f);
         sendActionBar(p, "§f§l✦ §bGOLDEN DOMAIN §f§l✦ §7[" + progress + "%]");
 
-        // ── FASE 1: HEXAGON ARENA MENGAMBANG & BERPUTAR ──
         BukkitRunnable domainTask = new BukkitRunnable() {
             int ticks = 0;
-            final int duration = 40; // 2 detik animasi arena
+            final int duration = 40;
             
             @Override
             public void run() {
                 if (ticks >= duration) {
-                    // ── FASE 2: PLAYER TP MUNDUR SEBELUM SWORD IMPACT ──
-                    Vector dir = p.getLocation().getDirection().setY(0).normalize();
-                    Location safeSpot = p.getLocation().clone().add(dir.clone().multiply(-6)).add(0, 1, 0); // FIX: clone() before modify
+                    // ── FASE 2: PLAYER TP MUNDUR ──
+                    // FIX #382: Hindari chaining Vector mutator
+                    Vector dir = p.getLocation().getDirection().clone();
+                    dir.setY(0);
+                    dir.normalize();
+                    
+                    // FIX: Buat safeSpot dengan constructor, hindari chaining add()
+                    Location playerLoc = p.getLocation();
+                    Vector offset = dir.clone().multiply(-6);
+                    Location safeSpot = new Location(
+                        playerLoc.getWorld(),
+                        playerLoc.getX() + offset.getX(),
+                        playerLoc.getY() + 1,
+                        playerLoc.getZ() + offset.getZ()
+                    );
+                    
                     p.teleport(safeSpot);
                     p.playSound(safeSpot, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.8f);
                     
-                    // ── FASE 3: PEDANG RAKSASA TURUN DARI LANGIT ──
                     startSwordStrike(center, range, progress, p);
-                    
                     this.cancel();
                     return;
                 }
                 
-                // Rotasi hexagon
                 double rotation = ticks * DOMAIN_ROTATION_SPEED;
                 
-                // Gambar 6 titik hexagon mengambang
                 for (int i = 0; i < 6; i++) {
                     double angle = Math.toRadians(i * 60 + rotation);
-                    Location corner = center.clone().add(
-                        Math.cos(angle) * range,
-                        DOMAIN_HEIGHT + (Math.sin(ticks / 4.0 + i) * 0.3), // Efek melayang naik-turun
-                        Math.sin(angle) * range
-                    );
                     
-                    // Partikel hexagon: aqua gold gradient
+                    double cornerX = center.getX() + Math.cos(angle) * range;
+                    double cornerY = DOMAIN_HEIGHT + (Math.sin(ticks / 4.0 + i) * 0.3);
+                    double cornerZ = center.getZ() + Math.sin(angle) * range;
+                    Location corner = new Location(p.getWorld(), cornerX, cornerY, cornerZ);
+                    
                     Color hexColor = Color.fromRGB(
                         150 + (int)(50 * Math.sin(ticks/5.0 + i)),
                         200 + (int)(30 * Math.cos(ticks/7.0)),
@@ -271,25 +280,21 @@ public class SkillListener implements Listener {
                     p.getWorld().spawnParticle(Particle.DUST, corner, 2, 
                         new Particle.DustOptions(hexColor, 2.0f));
                     
-                    // Garis penghubung hexagon (opsional, elegan)
                     if (i % 2 == 0) {
-                        Location next = center.clone().add(
-                            Math.cos(angle + Math.toRadians(60)) * range,
-                            DOMAIN_HEIGHT,
-                            Math.sin(angle + Math.toRadians(60)) * range
-                        );
-                        drawLine(p.getWorld(), corner, next, Particle.DUST, new Particle.DustOptions(Color.WHITE, 0.8f), 0.6); // FIX: pass world
+                        double nextAngle = angle + Math.toRadians(60);
+                        double nextX = center.getX() + Math.cos(nextAngle) * range;
+                        double nextZ = center.getZ() + Math.sin(nextAngle) * range;
+                        Location next = new Location(p.getWorld(), nextX, DOMAIN_HEIGHT, nextZ);
+                        
+                        drawLine(p.getWorld(), corner, next, Particle.DUST, new Particle.DustOptions(Color.WHITE, 0.8f), 0.6);
                     }
                 }
                 
-                // ── DEBUFF: SLOW + DARKNESS KE SEMUA ENTITY (termasuk user) ──
                 Collection<Entity> nearby = center.getWorld().getNearbyEntities(center, range, range, range);
                 for (Entity en : nearby) {
                     if (en instanceof LivingEntity le) {
-                        // Tandai agar dapat proteksi fall damage
                         domainAffected.add(le.getUniqueId());
                         
-                        // Freeze total (Slowness 255 = tidak bisa gerak)
                         le.addPotionEffect(new PotionEffect(
                             PotionEffectType.SLOWNESS, 
                             DOMAIN_FREEZE_DURATION, 
@@ -297,7 +302,6 @@ public class SkillListener implements Listener {
                             false, false
                         ));
                         
-                        // Gelap total (Darkness)
                         le.addPotionEffect(new PotionEffect(
                             PotionEffectType.DARKNESS, 
                             DOMAIN_DARKNESS_DURATION, 
@@ -305,27 +309,25 @@ public class SkillListener implements Listener {
                             false, false
                         ));
                         
-                        // Efek visual kecil di atas kepala entity
                         if (progress > 70 && ticks % 5 == 0) {
-                            le.getWorld().spawnParticle(Particle.DUST, 
-                                le.getLocation().add(0, 2, 0), 1,
+                            Location headLoc = le.getLocation().clone();
+                            headLoc.setY(headLoc.getY() + 2);
+                            le.getWorld().spawnParticle(Particle.DUST, headLoc, 1,
                                 new Particle.DustOptions(Color.fromRGB(80, 120, 255), 1f));
                         }
                     }
                 }
                 
-                // Cahaya pillar dari atas (Furina style: beam of light)
                 if (ticks % 3 == 0) {
                     for (int i = 0; i < 3; i++) {
                         double angle = Math.toRadians(i * 120 + ticks * 2);
-                        Location beamTop = center.clone().add(
-                            Math.cos(angle) * (range * 0.7),
-                            15,
-                            Math.sin(angle) * (range * 0.7)
-                        );
-                        // Beam turun
+                        
+                        double beamX = center.getX() + Math.cos(angle) * (range * 0.7);
+                        double beamZ = center.getZ() + Math.sin(angle) * (range * 0.7);
+                        Location beamTop = new Location(p.getWorld(), beamX, 15, beamZ);
+                        
                         for (double y = 15; y > DOMAIN_HEIGHT; y -= 1.5) {
-                            Location beamPart = beamTop.clone().setY(y);
+                            Location beamPart = new Location(p.getWorld(), beamX, y, beamZ);
                             p.getWorld().spawnParticle(Particle.DUST, beamPart, 0,
                                 new Particle.DustOptions(Color.fromRGB(200, 230, 255), 2.5f));
                         }
@@ -337,12 +339,10 @@ public class SkillListener implements Listener {
         };
         domainTask.runTaskTimer(plugin, 0L, 2L);
 
-        // ── CLEANUP: Hapus proteksi fall damage setelah efek selesai ──
         new BukkitRunnable() {
             @Override
             public void run() {
-                domainAffected.remove(uuid); // Keep player protected a bit longer
-                // Hapus semua entity yang sudah tidak perlu
+                domainAffected.remove(uuid);
                 Iterator<UUID> it = domainAffected.iterator();
                 while (it.hasNext()) {
                     Entity en = Bukkit.getEntity(it.next());
@@ -351,64 +351,61 @@ public class SkillListener implements Listener {
                     }
                 }
             }
-        }.runTaskLater(plugin, 100L); // 5 detik
+        }.runTaskLater(plugin, 100L);
     }
 
     // ========================================================================
-    // ⚔️ SWORD STRIKE ANIMATION (FURINA ENDING STYLE)
+    // ⚔️ SWORD STRIKE ANIMATION
     // ========================================================================
     private void startSwordStrike(Location center, double range, int progress, Player caster) {
-        // Sound dramatis sebelum sword muncul
         caster.getWorld().playSound(center, Sound.ENTITY_WARDEN_SNIFF, 1.5f, 0.3f);
         
         new BukkitRunnable() {
             int frame = 0;
-            final int descentFrames = (int) (20 / SWORD_DESCENT_SPEED); // ~33 frames dari 20 blok
+            final int descentFrames = (int) (20 / SWORD_DESCENT_SPEED);
             
             @Override
             public void run() {
                 if (frame > descentFrames + 15) {
-                    // ── FINAL IMPACT: LEDAKAN ELEGAN (bukan explosion biasa) ──
                     triggerSwordImpact(center, range, progress, caster);
                     this.cancel();
                     return;
                 }
                 
-                // ── VISUAL: PEDANG TURUN PELAN DARI LANGIT ──
                 double swordY = 25 - (frame * SWORD_DESCENT_SPEED);
                 
                 if (frame <= descentFrames) {
-                    // Bentuk pedang: garis vertikal + hilt + guard
-                    drawSwordBlade(caster.getWorld(), center.clone().setY(swordY), SWORD_SIZE, frame); // FIX: pass world
+                    Location swordBase = new Location(caster.getWorld(), center.getX(), swordY, center.getZ());
+                    drawSwordBlade(caster.getWorld(), swordBase, SWORD_SIZE, frame);
                     
-                    // Partikel "tekanan udara" saat pedang mendekat
                     if (frame > descentFrames - 10) {
                         double pressureRadius = range * (1.2 - ((frame - (descentFrames-10)) * 0.02));
                         for (int i = 0; i < 8; i++) {
                             double angle = (Math.PI * 2 / 8) * i;
-                            Location pressure = center.clone().add(
-                                Math.cos(angle) * pressureRadius,
+                            Location pressure = new Location(
+                                caster.getWorld(),
+                                center.getX() + Math.cos(angle) * pressureRadius,
                                 1,
-                                Math.sin(angle) * pressureRadius
+                                center.getZ() + Math.sin(angle) * pressureRadius
                             );
                             caster.getWorld().spawnParticle(Particle.CLOUD, pressure, 1, 0.3, 0.1, 0.3, 0.05);
                         }
                     }
                     
-                    // Sound descending pitch naik - FIX: ganti sound yang tidak valid
+                    // FIX: Ganti sound invalid _RESONATE → _HIT
                     if (frame % 3 == 0) {
-                        caster.getWorld().playSound(center, Sound.BLOCK_AMETHYST_CLUSTER_HIT, // FIX: was _RESONATE (invalid)
+                        caster.getWorld().playSound(center, Sound.BLOCK_AMETHYST_CLUSTER_HIT, 
                             0.4f, 0.5f + (frame / 20f));
                     }
                 } else {
-                    // ── POST-IMPACT: Residual particles ──
                     if ((frame - descentFrames) % 4 == 0) {
                         for (int i = 0; i < 12; i++) {
                             double angle = Math.random() * Math.PI * 2;
-                            Location residual = center.clone().add(
-                                Math.cos(angle) * (Math.random() * range),
+                            Location residual = new Location(
+                                caster.getWorld(),
+                                center.getX() + Math.cos(angle) * (Math.random() * range),
                                 1 + Math.random() * 2,
-                                Math.sin(angle) * (Math.random() * range)
+                                center.getZ() + Math.sin(angle) * (Math.random() * range)
                             );
                             caster.getWorld().spawnParticle(Particle.DUST, residual, 0,
                                 new Particle.DustOptions(Color.fromRGB(255, 220, 100), 1.5f));
@@ -421,54 +418,48 @@ public class SkillListener implements Listener {
         }.runTaskTimer(plugin, 0L, 1L);
     }
 
-    // Gambar visual pedang (blade + guard + hilt) - FIX: tambah parameter World
+    // FIX: Tambah parameter World
     private void drawSwordBlade(World world, Location base, double size, int animationProgress) {
-        // Blade utama (garis vertikal)
         for (double y = 0; y < size * 2; y += 0.3) {
-            Location bladePart = base.clone().subtract(0, y, 0);
-            // Warna: dari putih terang (ujung) ke gold (pangkal)
+            Location bladePart = new Location(world, base.getX(), base.getY() - y, base.getZ());
             Color bladeColor = Color.fromRGB(
                 255,
                 230 - (int)(50 * (y / (size*2))),
                 180 - (int)(80 * (y / (size*2)))
             );
-            // FIX: cast ke float untuk size parameter
+            // FIX: Cast explicit ke float
             world.spawnParticle(Particle.DUST, bladePart, 1,
                 new Particle.DustOptions(bladeColor, (float)(2.8 - (y * 0.1))));
         }
         
-        // Guard (pelindung tangan) - horizontal
-        Location guard = base.clone().subtract(0, size * 2, 0);
+        Location guard = new Location(world, base.getX(), base.getY() - size * 2, base.getZ());
         for (double x = -size/2; x <= size/2; x += 0.4) {
-            world.spawnParticle(Particle.DUST, guard.clone().add(x, 0, 0), 2,
+            world.spawnParticle(Particle.DUST, new Location(world, guard.getX() + x, guard.getY(), guard.getZ()), 2,
                 new Particle.DustOptions(Color.fromRGB(255, 200, 50), 2.2f));
-            world.spawnParticle(Particle.DUST, guard.clone().add(0, 0, x), 2,
+            world.spawnParticle(Particle.DUST, new Location(world, guard.getX(), guard.getY(), guard.getZ() + x), 2,
                 new Particle.DustOptions(Color.fromRGB(255, 200, 50), 2.2f));
         }
         
-        // Hilt (pegangan) - kecil di bawah guard
-        Location hilt = guard.clone().subtract(0, 0.5, 0);
+        Location hilt = new Location(world, guard.getX(), guard.getY() - 0.5, guard.getZ());
         world.spawnParticle(Particle.DUST, hilt, 4,
             new Particle.DustOptions(Color.fromRGB(139, 69, 19), 1.8f));
             
-        // Spark efek di ujung pedang (semakin dekat impact, semakin intens)
         if (animationProgress > 20) {
-            Location tip = base.clone();
-            world.spawnParticle(Particle.FLASH, tip, 0);
-            world.spawnParticle(Particle.DUST, tip, 3,
+            world.spawnParticle(Particle.FLASH, base, 0);
+            world.spawnParticle(Particle.DUST, base, 3,
                 new Particle.DustOptions(Color.WHITE, 3f));
         }
     }
 
-    // ── FINAL IMPACT: Ledakan elegan ala Furina ──
+    // ========================================================================
+    // FINAL IMPACT
+    // ========================================================================
     private void triggerSwordImpact(Location center, double range, int progress, Player caster) {
         World world = center.getWorld();
         
-        // 1. Flash + screen shake effect (via particle burst)
         world.spawnParticle(Particle.FLASH, center, 1, 0, 0, 0, 0);
         world.spawnParticle(Particle.EXPLOSION_EMITTER, center, 2, range*0.3, 1, range*0.3, 0.1);
         
-        // 2. Shockwave ring horizontal (seperti air ripple)
         for (int ring = 0; ring < 3; ring++) {
             new BukkitRunnable() {
                 int r = 0;
@@ -481,10 +472,11 @@ public class SkillListener implements Listener {
                     
                     for (int i = 0; i < 24; i++) {
                         double angle = (Math.PI * 2 / 24) * i;
-                        Location ripple = center.clone().add(
-                            Math.cos(angle) * currentRange,
+                        Location ripple = new Location(
+                            world,
+                            center.getX() + Math.cos(angle) * currentRange,
                             0.2,
-                            Math.sin(angle) * currentRange
+                            center.getZ() + Math.sin(angle) * currentRange
                         );
                         Color rippleColor = Color.fromRGB(
                             200 + ring*20,
@@ -492,76 +484,68 @@ public class SkillListener implements Listener {
                             255 - ring*40
                         );
                         world.spawnParticle(Particle.DUST, ripple, 0,
-                            new Particle.DustOptions(rippleColor, (float)(1.5 - (r/20.0)))); // FIX: cast float
+                            new Particle.DustOptions(rippleColor, (float)(1.5 - (r/20.0))));
                     }
                     r++;
                 }
             }.runTaskTimer(plugin, ring * 2L, 1L);
         }
         
-        // 3. Light pillars dari titik impact (vertical beams)
         for (int i = 0; i < 6; i++) {
             double angle = Math.toRadians(i * 60);
-            Location pillarBase = center.clone().add(
-                Math.cos(angle) * (range * 0.6),
+            Location pillarBase = new Location(
+                world,
+                center.getX() + Math.cos(angle) * (range * 0.6),
                 0.1,
-                Math.sin(angle) * (range * 0.6)
+                center.getZ() + Math.sin(angle) * (range * 0.6)
             );
             new BukkitRunnable() {
                 int h = 0;
                 @Override
                 public void run() {
                     if (h > 12) { this.cancel(); return; }
-                    world.spawnParticle(Particle.DUST, pillarBase.clone().add(0, h, 0), 2,
-                        new Particle.DustOptions(Color.fromRGB(255, 240, 200), (float)(2.0 - (h/10.0)))); // FIX: cast float
+                    world.spawnParticle(Particle.DUST, 
+                        new Location(world, pillarBase.getX(), pillarBase.getY() + h, pillarBase.getZ()), 2,
+                        new Particle.DustOptions(Color.fromRGB(255, 240, 200), (float)(2.0 - (h/10.0))));
                     h++;
                 }
             }.runTaskTimer(plugin, 0L, 2L);
         }
         
-        // 4. Sound impact layered
         world.playSound(center, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 2f, 0.6f);
         world.playSound(center, Sound.BLOCK_AMETHYST_CLUSTER_HIT, 1.5f, 2f);
         world.playSound(center, Sound.ITEM_TRIDENT_RETURN, 1f, 0.8f);
         
-        // 5. DAMAGE SCALING: 10 + (25 * progress%)
         double finalDamage = 10.0 + (25.0 * (progress / 100.0));
         Collection<Entity> nearby = world.getNearbyEntities(center, range, range, range);
         
         for (Entity en : nearby) {
             if (en instanceof LivingEntity le && !en.equals(caster) && !en.isDead()) {
-                // Knockup elegan (terbang sedikit lalu jatuh aman)
-                le.setVelocity(new Vector(
-                    (le.getLocation().getX() - center.getX()) * 0.15,
-                    0.8,
-                    (le.getLocation().getZ() - center.getZ()) * 0.15
-                ));
+                double vx = (le.getLocation().getX() - center.getX()) * 0.15;
+                double vz = (le.getLocation().getZ() - center.getZ()) * 0.15;
+                le.setVelocity(new Vector(vx, 0.8, vz));
                 
-                // Damage + indicator particle
                 le.damage(finalDamage, caster);
-                le.getWorld().spawnParticle(Particle.CRIT, le.getLocation().add(0, 1, 0), 15, 0.3, 0.3, 0.3, 0.1);
+                Location critLoc = le.getLocation().clone();
+                critLoc.setY(critLoc.getY() + 1);
+                le.getWorld().spawnParticle(Particle.CRIT, critLoc, 15, 0.3, 0.3, 0.3, 0.1);
                 
-                // Tandai untuk proteksi fall damage
                 domainAffected.add(le.getUniqueId());
             }
         }
         
-        // 6. Title notification untuk caster
         caster.sendTitle(
             "§f§l✦ §bDOMAIN COMPLETE §f§l✦",
             "§7Damage: §e" + String.format("%.1f", finalDamage) + " §7| §eRadius: " + String.format("%.1f", range),
             10, 40, 20
         );
         
-        // 7. Cleanup: hapus darkness setelah beberapa detik
         new BukkitRunnable() {
             @Override
             public void run() {
                 for (Entity en : nearby) {
                     if (en instanceof LivingEntity le) {
                         le.removePotionEffect(PotionEffectType.DARKNESS);
-                        // Optional: hapus slow juga jika ingin
-                        // le.removePotionEffect(PotionEffectType.SLOWNESS);
                     }
                 }
             }
@@ -569,28 +553,24 @@ public class SkillListener implements Listener {
     }
 
     // ========================================================================
-    // ✦ SKILL 1: ANIME BLINK (Sneak + Hit)
+    // ✦ SKILL 1: ANIME BLINK
     // ========================================================================
     private void executeAnimeBlink(Player p, LivingEntity target) {
         List<LivingEntity> targets = new ArrayList<>();
         targets.add(target);
         
-        // Cari target tambahan dalam radius
         target.getNearbyEntities(7, 4, 7).stream()
             .filter(en -> en instanceof LivingEntity && !en.equals(p) && targets.size() < BLINK_MAX_TARGETS)
             .forEach(en -> targets.add((LivingEntity) en));
 
-        // Visual start: player invis + partikel portal
         p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 50, 0, false, false));
         p.getWorld().playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1.3f);
         p.getWorld().spawnParticle(Particle.PORTAL, p.getLocation(), 40, 1.2, 1.2, 1.2, 0.08);
 
-        // Launch targets: spread X/Y/Z + anti fall
         for (LivingEntity t : targets) {
             blinkProtected.add(t.getUniqueId());
             t.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 100, 0));
             
-            // Velocity menyebar 3D
             double angle = Math.random() * Math.PI * 2;
             double hSpread = BLINK_HORIZONTAL_SPREAD + Math.random() * 0.8;
             double vBoost = BLINK_VERTICAL_BOOST + Math.random() * 0.5;
@@ -600,27 +580,32 @@ public class SkillListener implements Listener {
                 Math.sin(angle) * hSpread
             ));
             
-            // Partikel cloud saat terlempar
             t.getWorld().spawnParticle(Particle.CLOUD, t.getLocation(), 20, 0.6, 0.4, 0.6, 0.05);
             t.getWorld().spawnParticle(Particle.DUST, t.getLocation(), 10,
                 new Particle.DustOptions(Color.fromRGB(200, 180, 255), 1.8f));
         }
 
-        // Sequence teleport + hit
         new BukkitRunnable() {
             int i = 0;
-            Location last = p.getLocation().clone(); // FIX: clone location
+            Location last = p.getLocation().clone();
             @Override
             public void run() {
                 if (i >= targets.size()) {
-                    // Return to last target position
                     LivingEntity lastTarget = targets.get(targets.size() - 1);
-                    p.teleport(lastTarget.getLocation().clone().add(
-                        lastTarget.getLocation().getDirection().clone().multiply(-1.8).setY(0)
-                    ));
+                    Vector backDir = lastTarget.getLocation().getDirection().clone();
+                    backDir.setY(0);
+                    backDir.normalize();
+                    backDir.multiply(-1.8);
+                    
+                    Location returnLoc = new Location(
+                        p.getWorld(),
+                        lastTarget.getX() + backDir.getX(),
+                        lastTarget.getY(),
+                        lastTarget.getZ() + backDir.getZ()
+                    );
+                    p.teleport(returnLoc);
                     p.removePotionEffect(PotionEffectType.INVISIBILITY);
                     
-                    // Cleanup fall protection after delay
                     new BukkitRunnable() {
                         @Override
                         public void run() {
@@ -635,66 +620,73 @@ public class SkillListener implements Listener {
                 }
                 
                 LivingEntity curr = targets.get(i);
-                drawTrail(p.getWorld(), last, curr.getLocation(), Color.fromRGB(255, 215, 0)); // FIX: pass world
-                p.teleport(curr.getLocation().clone().add(0, 0.3, 0)); // Sedikit di atas
+                drawTrail(p.getWorld(), last, curr.getLocation(), Color.fromRGB(255, 215, 0));
+                
+                Location teleportLoc = new Location(p.getWorld(), curr.getX(), curr.getY() + 0.3, curr.getZ());
+                p.teleport(teleportLoc);
                 curr.damage(BLINK_DAMAGE, p);
                 
-                // Hit feedback
                 p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1f, 2f);
                 p.getWorld().spawnParticle(Particle.CRIT, curr.getLocation(), 25, 0.4, 0.4, 0.4, 0.15);
                 p.getWorld().spawnParticle(Particle.DUST, curr.getLocation(), 15,
                     new Particle.DustOptions(Color.fromRGB(255, 100, 100), 2f));
                 
-                last = curr.getLocation().clone(); // FIX: clone location
+                last = curr.getLocation().clone();
                 i++;
             }
         }.runTaskTimer(plugin, 0L, 3L);
     }
 
     // ========================================================================
-    // ↯ SKILL 2: MAJU MUNDUR (Stack 3 + Sneak + Hit)
+    // ↯ SKILL 2: MAJU MUNDUR
     // ========================================================================
     private void executeMajuMundur(Player p) {
         p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PHANTOM_FLAP, 1.2f, 0.9f);
         p.getWorld().spawnParticle(Particle.CLOUD, p.getLocation(), 25, 0.6, 0.5, 0.6, 0.1);
         
-        Vector dir = p.getLocation().getDirection().setY(0).normalize();
+        Vector dir = p.getLocation().getDirection().clone();
+        dir.setY(0);
+        dir.normalize();
         
-        // Fase 1: Mundur cepat
         p.setVelocity(dir.clone().multiply(MM_BACKWARD_MULTIPLIER));
         p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 15, 1));
         
-        // Visual mundur: trail partikel
         new BukkitRunnable() {
             int trailTicks = 0;
             @Override
             public void run() {
                 if (trailTicks >= MM_DELAY_TICKS) { this.cancel(); return; }
-                p.getWorld().spawnParticle(Particle.DUST, p.getLocation().clone().add(0, 0.5, 0), 4, // FIX: clone
+                Location trailLoc = new Location(p.getWorld(), p.getX(), p.getY() + 0.5, p.getZ());
+                p.getWorld().spawnParticle(Particle.DUST, trailLoc, 4,
                     new Particle.DustOptions(Color.fromRGB(180, 200, 255), 1.5f));
                 trailTicks++;
             }
         }.runTaskTimer(plugin, 0L, 1L);
         
-        // Fase 2: Maju menerjang + impact
         new BukkitRunnable() {
             @Override
             public void run() {
-                // Burst forward
                 p.setVelocity(dir.clone().multiply(MM_FORWARD_MULTIPLIER));
                 
-                // Impact visual
                 p.getWorld().spawnParticle(Particle.FLASH, p.getLocation(), 10);
                 p.getWorld().spawnParticle(Particle.DUST, p.getLocation(), 40,
                     new Particle.DustOptions(Color.fromRGB(255, 220, 80), 2.8f));
                 p.getWorld().playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 1.3f);
                 
-                // Damage ke entity di depan
-                Location front = p.getLocation().clone().add(dir.clone().multiply(2.5)); // FIX: clone
+                Vector frontOffset = dir.clone().multiply(2.5);
+                Location front = new Location(
+                    p.getWorld(),
+                    p.getX() + frontOffset.getX(),
+                    p.getY(),
+                    p.getZ() + frontOffset.getZ()
+                );
+                
                 p.getWorld().getNearbyEntities(front, 3, 2.5, 3).forEach(en -> {
                     if (en instanceof LivingEntity le && !en.equals(p) && !en.isDead()) {
                         le.damage(MM_DAMAGE, p);
-                        le.setVelocity(dir.clone().multiply(1.2).setY(0.5));
+                        Vector knockback = dir.clone().multiply(1.2);
+                        knockback.setY(0.5);
+                        le.setVelocity(knockback);
                         le.getWorld().spawnParticle(Particle.CRIT, le.getLocation(), 20, 0.3, 0.3, 0.3, 0.1);
                     }
                 });
@@ -706,20 +698,21 @@ public class SkillListener implements Listener {
     // ✨ HELPER METHODS - FIXED
     // ========================================================================
     
-    // FIX #1: Tambahkan parameter World, hapus referensi 'p' yang tidak valid
     private void drawTrail(World world, Location from, Location to, Color color) {
-        Vector step = to.toVector().subtract(from.toVector()).normalize().multiply(0.35);
+        Vector diff = to.toVector().subtract(from.toVector());
+        Vector step = diff.clone().normalize().multiply(0.35);
         double dist = from.distance(to);
         Location current = from.clone();
         
         for (double d = 0; d < dist; d += 0.35) {
+            // FIX: Gunakan add() terpisah, jangan dalam assignment
+            current = current.clone();
             current.add(step);
             world.spawnParticle(Particle.DUST, current, 2,
                 new Particle.DustOptions(color, 2.0f));
         }
     }
     
-    // FIX #2: Tambahkan parameter World, hapus referensi 'p' yang tidak valid
     private void drawLine(World world, Location from, Location to, Particle particle, Object options, double stepSize) {
         Vector direction = to.toVector().subtract(from.toVector()).normalize();
         double distance = from.distance(to);
@@ -729,6 +722,7 @@ public class SkillListener implements Listener {
             if (particle == Particle.DUST && options instanceof Particle.DustOptions) {
                 world.spawnParticle(Particle.DUST, current, 0, (Particle.DustOptions) options);
             }
+            current = current.clone();
             current.add(direction.clone().multiply(stepSize));
         }
     }
@@ -742,4 +736,4 @@ public class SkillListener implements Listener {
         return item.hasItemMeta() && 
                item.getItemMeta().getPersistentDataContainer().has(plugin.SWORD_KEY, PersistentDataType.BYTE);
     }
-                        }
+}
