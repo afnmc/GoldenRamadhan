@@ -18,35 +18,17 @@ import org.bukkit.util.Vector;
 
 import java.util.*;
 
-/**
- * ============================================================================
- * GOLDEN MOON - ULTIMATE SKILL LISTENER (v2.5 Full Visuals)
- * 🚀 Fitur: Golden Domain, Anime Blink, Maju Mundur (Explosive Dash)
- * 🛠 Fix: API Compatibility for Spigot/Paper 1.21+
- * ============================================================================
- */
 public class SkillListener implements Listener {
     
-    // --- CONFIGURATION: DOMAIN ---
-    private static final double DOMAIN_MIN_RANGE = 4.0;
-    private static final double DOMAIN_MAX_RANGE = 12.0;
-    private static final int DOMAIN_ROTATION_SPEED = 3;
-    private static final double SWORD_SIZE = 5.0;
-    
-    // --- CONFIGURATION: SKILLS ---
-    private static final int BLINK_MAX_TARGETS = 4;
-    private static final double MM_FORWARD_POWER = 3.8;
-
     private final GoldenMoon plugin;
     private final Map<UUID, Integer> chargeStack = new HashMap<>();
-    private final Map<UUID, Long> clickHoldStart = new HashMap<>();
     private final Set<UUID> immunityFrame = Collections.synchronizedSet(new HashSet<>());
 
     public SkillListener(GoldenMoon plugin) {
         this.plugin = plugin;
     }
 
-    // --- [ EVENT: FALL PROTECTION ] ---
+    // --- ANTI FALL DAMAGE SAAT SKILL ---
     @EventHandler(ignoreCancelled = true)
     public void onFall(EntityDamageEvent e) {
         if (e.getCause() == EntityDamageEvent.DamageCause.FALL && immunityFrame.contains(e.getEntity().getUniqueId())) {
@@ -55,7 +37,7 @@ public class SkillListener implements Listener {
         }
     }
 
-    // --- [ EVENT: COMBAT & STACKING ] ---
+    // --- COMBAT & SKILL TRIGGER ---
     @EventHandler
     public void onCombat(EntityDamageByEntityEvent e) {
         if (!(e.getDamager() instanceof Player p) || !isHoldingSword(p)) return;
@@ -64,219 +46,156 @@ public class SkillListener implements Listener {
         UUID id = p.getUniqueId();
         int stack = chargeStack.getOrDefault(id, 0);
 
-        // Logic Stacking
+        // STACKING LOGIC
         if (stack < 5) {
             stack++;
             chargeStack.put(id, stack);
             sendActionBar(p, "§e§l✦ Golden Stack: §f" + stack + "§7/§f5");
-            p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_HIT, 1f, 1.5f + (stack * 0.1f));
-            
-            if (stack == 5) {
-                p.sendTitle("§f§l⚡", "§eTAHAN KLIK KANAN UNTUK DOMAIN", 5, 40, 10);
-                p.getWorld().spawnParticle(Particle.FLASH, p.getLocation().add(0, 1, 0), 1);
-            }
+            p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_HIT, 1f, 1.2f + (stack * 0.2f));
+            if (stack == 5) p.sendTitle("§f§l⚡", "§eKLIK KANAN: ULTIMATE", 5, 30, 5);
         }
 
-        // Skill 2: Maju Mundur (Sneak + Stack 3)
+        // SKILL 1: BLINK COMBO (SNEAK + HIT)
+        if (p.isSneaking() && stack < 3) {
+            executeBlinkCombo(p, target);
+        }
+
+        // SKILL 2: MAJU MUNDUR (SNEAK + STACK 3-4)
         if (p.isSneaking() && stack >= 3 && stack < 5) {
             executeMajuMundur(p);
             chargeStack.put(id, 0);
-            return;
-        }
-
-        // Skill 1: Anime Blink (Sneak + Stack 1-2)
-        if (p.isSneaking() && stack < 3) {
-            executeAnimeBlink(p, target);
         }
     }
 
-    // --- [ EVENT: ULTIMATE CHARGING ] ---
+    // --- INSTANT ULTIMATE ---
     @EventHandler
-    public void onRightClick(PlayerInteractEvent e) {
+    public void onInteract(PlayerInteractEvent e) {
         Player p = e.getPlayer();
-        if (!isHoldingSword(p) || chargeStack.getOrDefault(p.getUniqueId(), 0) < 5) return;
-
+        if (!isHoldingSword(p)) return;
         if (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            e.setCancelled(true);
-            if (clickHoldStart.containsKey(p.getUniqueId())) return;
-            
-            clickHoldStart.put(p.getUniqueId(), System.currentTimeMillis());
-            runChargingTask(p);
+            int stack = chargeStack.getOrDefault(p.getUniqueId(), 0);
+            if (stack >= 5) {
+                e.setCancelled(true);
+                chargeStack.put(p.getUniqueId(), 0);
+                executeGoldenDomain(p);
+            }
         }
     }
 
-    private void runChargingTask(Player p) {
+    private void executeBlinkCombo(Player p, LivingEntity target) {
+        Location startLoc = p.getLocation().clone().add(0, 1, 0); 
+        target.setVelocity(new Vector(0, 1.1, 0)); 
+        
         new BukkitRunnable() {
             @Override
             public void run() {
-                UUID id = p.getUniqueId();
-                if (!p.isOnline() || !clickHoldStart.containsKey(id) || !isHoldingSword(p)) {
-                    this.cancel();
-                    return;
-                }
-
-                long elapsed = System.currentTimeMillis() - clickHoldStart.get(id);
-                int progress = (int) Math.min((elapsed / 1500.0) * 100, 100); // 1.5 detik full
-
-                // Visual Suction Particles
-                double radius = 4.0 * (1.0 - (progress / 100.0));
-                for (int i = 0; i < 3; i++) {
-                    double angle = Math.random() * Math.PI * 2;
-                    Location partLoc = p.getLocation().add(Math.cos(angle) * radius, 0.5 + Math.random(), Math.sin(angle) * radius);
-                    p.getWorld().spawnParticle(Particle.DUST, partLoc, 1, new Particle.DustOptions(Color.AQUA, 1.2f));
-                }
-
-                sendActionBar(p, "§f§lDOMINATING: §b" + progress + "% " + "§8[" + "§b" + "|".repeat(progress/10) + "§8" + ".".repeat(10 - progress/10) + "§8]");
-
-                if (progress >= 100 || !p.isHandRaised()) { // Jika dilepas atau penuh
-                    executeGoldenDomain(p, progress);
-                    clickHoldStart.remove(id);
-                    chargeStack.put(id, 0);
-                    this.cancel();
-                }
+                Location behind = target.getLocation().clone().subtract(target.getLocation().getDirection().multiply(1.5));
+                behind.setY(target.getLocation().getY() + 0.5);
+                
+                drawTrail(startLoc, behind.clone().add(0, 1, 0), Color.WHITE);
+                p.teleport(behind);
+                
+                p.getWorld().spawnParticle(Particle.SWEEP_ATTACK, target.getLocation().add(0, 1, 0), 2);
+                target.damage(9.0, p);
+                p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1f, 1.8f);
+                
+                target.setVelocity(new Vector(0, -1.8, 0));
+                immunityFrame.add(p.getUniqueId());
+                new BukkitRunnable() { @Override public void run() { immunityFrame.remove(p.getUniqueId()); } }.runTaskLater(plugin, 40L);
             }
-        }.runTaskTimer(plugin, 0, 1);
+        }.runTaskLater(plugin, 3L);
     }
 
-    // --- [ CORE: GOLDEN DOMAIN ] ---
-    private void executeGoldenDomain(Player p, int progress) {
-        if (progress < 40) {
-            sendActionBar(p, "§cGagal! Charge tidak cukup.");
-            return;
-        }
-
-        Location center = p.getLocation().clone();
-        double range = DOMAIN_MIN_RANGE + ((DOMAIN_MAX_RANGE - DOMAIN_MIN_RANGE) * (progress / 100.0));
+    private void executeMajuMundur(Player p) {
+        Vector dir = p.getLocation().getDirection().setY(0).normalize();
+        p.setVelocity(dir.clone().multiply(-1.6).setY(0.3));
         
-        p.getWorld().playSound(center, Sound.BLOCK_BEACON_ACTIVATE, 2f, 1f);
+        Location behind = p.getLocation().subtract(dir.clone().multiply(1));
+        p.getWorld().spawnParticle(Particle.EXPLOSION, behind, 3, 0.2, 0.2, 0.2, 0.1);
+        p.playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 1.5f);
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                p.setVelocity(dir.clone().multiply(3.8));
+                p.getWorld().playSound(p.getLocation(), Sound.ITEM_TRIDENT_RIPTIDE_3, 1f, 1.2f);
+                
+                p.getNearbyEntities(4.0, 3.0, 4.0).forEach(en -> {
+                    if (en instanceof LivingEntity le && !en.equals(p)) {
+                        le.damage(12.0, p);
+                        le.getWorld().spawnParticle(Particle.CRIT, le.getLocation().add(0, 1, 0), 15);
+                    }
+                });
+            }
+        }.runTaskLater(plugin, 8L);
+    }
+
+    private void executeGoldenDomain(Player p) {
+        Location center = p.getLocation().clone();
+        p.getWorld().playSound(center, Sound.ENTITY_WITHER_SPAWN, 1f, 1.5f);
         
         new BukkitRunnable() {
             int ticks = 0;
             @Override
             public void run() {
-                if (ticks > 40) { // Durasi ancang-ancang arena
-                    triggerFinalImpact(p, center, range, progress);
+                if (ticks > 25) { 
+                    triggerSwordDrop(p, center);
                     this.cancel();
                     return;
                 }
-
-                // Gambar Hexagon Berputar
-                double rotation = ticks * DOMAIN_ROTATION_SPEED;
+                double rotation = ticks * 8;
                 for (int i = 0; i < 6; i++) {
                     double angle = Math.toRadians(i * 60 + rotation);
-                    Location corner = center.clone().add(Math.cos(angle) * range, 0.2, Math.sin(angle) * range);
-                    p.getWorld().spawnParticle(Particle.DUST, corner, 5, new Particle.DustOptions(Color.YELLOW, 2.0f));
-                    
-                    // Hubungkan garis antar sudut
-                    double nextAngle = Math.toRadians((i + 1) * 60 + rotation);
-                    Location nextCorner = center.clone().add(Math.cos(nextAngle) * range, 0.2, Math.sin(nextAngle) * range);
-                    drawVisualLine(corner, nextCorner, Color.WHITE);
+                    Location corner = center.clone().add(Math.cos(angle) * 10, 0.2, Math.sin(angle) * 10);
+                    p.getWorld().spawnParticle(Particle.DUST, corner, 2, new Particle.DustOptions(Color.YELLOW, 1.5f));
                 }
-
-                // Freeze musuh di sekitar
-                center.getWorld().getNearbyEntities(center, range, range, range).forEach(en -> {
-                    if (en instanceof LivingEntity le && !en.equals(p)) {
-                        le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 10, 255, false, false));
-                        le.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 10, 0, false, false));
-                    }
-                });
                 ticks++;
             }
         }.runTaskTimer(plugin, 0, 1);
     }
 
-    private void triggerFinalImpact(Player p, Location center, double range, int progress) {
-        // Step 1: Player mundur bergaya
-        Vector back = p.getLocation().getDirection().multiply(-1).setY(0.5);
-        p.setVelocity(back);
+    private void triggerSwordDrop(Player p, Location center) {
+        p.setVelocity(p.getLocation().getDirection().multiply(-1.5).setY(0.4));
         immunityFrame.add(p.getUniqueId());
 
-        // Step 2: Animasi Pedang Jatuh
         new BukkitRunnable() {
             int frame = 0;
             @Override
             public void run() {
-                double y = 20 - (frame * 2);
+                double y = 15 - (frame * 3);
                 Location bladeLoc = center.clone().add(0, y, 0);
                 
-                // Gambar bentuk pedang sederhana pakai partikel
-                for(double i=0; i<SWORD_SIZE; i+=0.5) {
-                    center.getWorld().spawnParticle(Particle.DUST, bladeLoc.clone().add(0, i, 0), 5, new Particle.DustOptions(Color.WHITE, 2f));
+                // PEDANG RAKSASA (7 BLOK TINGGI)
+                for(double h=0; h<7; h+=0.5) {
+                    center.getWorld().spawnParticle(Particle.DUST, bladeLoc.clone().add(0, h, 0), 12, new Particle.DustOptions(Color.WHITE, 2.5f));
+                    center.getWorld().spawnParticle(Particle.END_ROD, bladeLoc.clone().add(0, h, 0), 1, 0.1, 0.1, 0.1, 0);
                 }
 
                 if (y <= 0) {
-                    // Step 3: LEDAKAN AKHIR
-                    center.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, center, 3);
-                    center.getWorld().spawnParticle(Particle.FLASH, center, 10, 2, 0, 2, 0);
+                    center.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, center, 5);
+                    center.getWorld().spawnParticle(Particle.FLASH, center, 8, 3, 1, 3, 0);
                     center.getWorld().playSound(center, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 2f, 0.5f);
                     
-                    double damage = 15.0 + (progress * 0.2);
-                    center.getWorld().getNearbyEntities(center, range, range, range).forEach(en -> {
+                    center.getNearbyEntities(10, 10, 10).forEach(en -> {
                         if (en instanceof LivingEntity le && !en.equals(p)) {
-                            le.damage(damage, p);
-                            le.setVelocity(new Vector(0, 1.2, 0));
+                            le.damage(30.0, p);
+                            le.setVelocity(new Vector(0, 1.5, 0));
                         }
                     });
-                    
                     new BukkitRunnable() { @Override public void run() { immunityFrame.remove(p.getUniqueId()); } }.runTaskLater(plugin, 40L);
                     this.cancel();
                 }
                 frame++;
             }
-        }.runTaskTimer(plugin, 5, 1);
+        }.runTaskTimer(plugin, 0, 1);
     }
 
-    // --- [ SKILL: ANIME BLINK ] ---
-    private void executeAnimeBlink(Player p, LivingEntity target) {
-        List<LivingEntity> targets = new ArrayList<>();
-        targets.add(target);
-        target.getNearbyEntities(6, 3, 6).stream()
-            .filter(en -> en instanceof LivingEntity && !en.equals(p) && targets.size() < BLINK_MAX_TARGETS)
-            .forEach(en -> targets.add((LivingEntity) en));
-
-        p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 40, 0));
-        
-        new BukkitRunnable() {
-            int i = 0;
-            @Override
-            public void run() {
-                if (i >= targets.size()) {
-                    p.removePotionEffect(PotionEffectType.INVISIBILITY);
-                    this.cancel();
-                    return;
-                }
-                LivingEntity curr = targets.get(i);
-                p.teleport(curr.getLocation().add(curr.getLocation().getDirection().multiply(-1)));
-                curr.damage(7.0, p);
-                curr.getWorld().spawnParticle(Particle.SWEEP_ATTACK, curr.getLocation().add(0, 1, 0), 1);
-                p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1f, 1.5f);
-                i++;
-            }
-        }.runTaskTimer(plugin, 0, 3);
-    }
-
-    // --- [ SKILL: MAJU MUNDUR ] ---
-    private void executeMajuMundur(Player p) {
-        Vector dir = p.getLocation().getDirection().setY(0).normalize();
-        p.setVelocity(dir.clone().multiply(-1.5).setY(0.3)); // Mundur dulu
-        
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                p.setVelocity(dir.multiply(MM_FORWARD_POWER)); // Terjang maju
-                p.getWorld().playSound(p.getLocation(), Sound.ENTITY_ZOMBIE_ATTACK_IRON_DOOR, 1f, 2f);
-                p.getWorld().spawnParticle(Particle.FLASH, p.getLocation(), 2);
-            }
-        }.runTaskLater(plugin, 7L);
-    }
-
-    // --- [ HELPERS ] ---
-    private void drawVisualLine(Location start, Location end, Color color) {
-        Vector vector = end.toVector().subtract(start.toVector());
-        double length = start.distance(end);
+    private void drawTrail(Location from, Location to, Color color) {
+        Vector vector = to.toVector().subtract(from.toVector());
+        double dist = from.distance(to);
         vector.normalize().multiply(0.5);
-        for (double i = 0; i < length; i += 0.5) {
-            start.getWorld().spawnParticle(Particle.DUST, start.clone().add(vector.clone().multiply(i)), 1, new Particle.DustOptions(color, 1f));
+        for (double i = 0; i < dist; i += 0.5) {
+            from.getWorld().spawnParticle(Particle.DUST, from.clone().add(vector.clone().multiply(i)), 2, new Particle.DustOptions(color, 1.5f));
         }
     }
 
@@ -286,8 +205,7 @@ public class SkillListener implements Listener {
 
     private boolean isHoldingSword(Player p) {
         ItemStack item = p.getInventory().getItemInMainHand();
-        if (item == null || !item.hasItemMeta()) return false;
-        return item.getItemMeta().getPersistentDataContainer().has(plugin.SWORD_KEY, PersistentDataType.BYTE);
+        return item != null && item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(plugin.SWORD_KEY, PersistentDataType.BYTE);
     }
 }
 
