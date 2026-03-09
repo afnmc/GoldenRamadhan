@@ -20,7 +20,7 @@ import java.util.*;
 
 /**
  * ============================================================================
- * GOLDEN MOON - SKILL LISTENER (v2.0 Furina Edition)
+ * GOLDEN MOON - SKILL LISTENER (v2.0 Furina Edition) - FIXED
  * Compatible: Minecraft 1.21.8 - 1.21.10
  * 
  * 🎭 GOLDEN DOMAIN (Ultimate):
@@ -162,7 +162,7 @@ public class SkillListener implements Listener {
                 int progress = (int) Math.min((elapsed * 100L) / (CHARGE_TICKS_TO_FULL * 50L), 100);
                 
                 // ── VISUAL: Partikel menyedot ke pusat (Furina style: aqua + white) ──
-                Location center = p.getLocation().add(0, 1.2, 0);
+                Location center = p.getLocation().clone().add(0, 1.2, 0); // FIX: clone() before add()
                 double radius = 3.0 - (2.5 * (progress / 100.0));
                 
                 for (int i = 0; i < 5; i++) {
@@ -239,7 +239,7 @@ public class SkillListener implements Listener {
                 if (ticks >= duration) {
                     // ── FASE 2: PLAYER TP MUNDUR SEBELUM SWORD IMPACT ──
                     Vector dir = p.getLocation().getDirection().setY(0).normalize();
-                    Location safeSpot = p.getLocation().add(dir.multiply(-6)).add(0, 1, 0);
+                    Location safeSpot = p.getLocation().clone().add(dir.clone().multiply(-6)).add(0, 1, 0); // FIX: clone() before modify
                     p.teleport(safeSpot);
                     p.playSound(safeSpot, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.8f);
                     
@@ -278,7 +278,7 @@ public class SkillListener implements Listener {
                             DOMAIN_HEIGHT,
                             Math.sin(angle + Math.toRadians(60)) * range
                         );
-                        drawLine(corner, next, Particle.DUST, new Particle.DustOptions(Color.WHITE, 0.8f), 0.6);
+                        drawLine(p.getWorld(), corner, next, Particle.DUST, new Particle.DustOptions(Color.WHITE, 0.8f), 0.6); // FIX: pass world
                     }
                 }
                 
@@ -341,7 +341,7 @@ public class SkillListener implements Listener {
         new BukkitRunnable() {
             @Override
             public void run() {
-                domainAffected.removeAll(Arrays.asList(uuid)); // Keep player protected a bit longer
+                domainAffected.remove(uuid); // Keep player protected a bit longer
                 // Hapus semua entity yang sudah tidak perlu
                 Iterator<UUID> it = domainAffected.iterator();
                 while (it.hasNext()) {
@@ -379,7 +379,7 @@ public class SkillListener implements Listener {
                 
                 if (frame <= descentFrames) {
                     // Bentuk pedang: garis vertikal + hilt + guard
-                    drawSwordBlade(center.clone().setY(swordY), SWORD_SIZE, frame);
+                    drawSwordBlade(caster.getWorld(), center.clone().setY(swordY), SWORD_SIZE, frame); // FIX: pass world
                     
                     // Partikel "tekanan udara" saat pedang mendekat
                     if (frame > descentFrames - 10) {
@@ -395,9 +395,9 @@ public class SkillListener implements Listener {
                         }
                     }
                     
-                    // Sound descending pitch naik
+                    // Sound descending pitch naik - FIX: ganti sound yang tidak valid
                     if (frame % 3 == 0) {
-                        caster.getWorld().playSound(center, Sound.BLOCK_AMETHYST_CLUSTER_RESONATE, 
+                        caster.getWorld().playSound(center, Sound.BLOCK_AMETHYST_CLUSTER_HIT, // FIX: was _RESONATE (invalid)
                             0.4f, 0.5f + (frame / 20f));
                     }
                 } else {
@@ -421,10 +421,8 @@ public class SkillListener implements Listener {
         }.runTaskTimer(plugin, 0L, 1L);
     }
 
-    // Gambar visual pedang (blade + guard + hilt)
-    private void drawSwordBlade(Location base, double size, int animationProgress) {
-        World world = base.getWorld();
-        
+    // Gambar visual pedang (blade + guard + hilt) - FIX: tambah parameter World
+    private void drawSwordBlade(World world, Location base, double size, int animationProgress) {
         // Blade utama (garis vertikal)
         for (double y = 0; y < size * 2; y += 0.3) {
             Location bladePart = base.clone().subtract(0, y, 0);
@@ -434,8 +432,9 @@ public class SkillListener implements Listener {
                 230 - (int)(50 * (y / (size*2))),
                 180 - (int)(80 * (y / (size*2)))
             );
+            // FIX: cast ke float untuk size parameter
             world.spawnParticle(Particle.DUST, bladePart, 1,
-                new Particle.DustOptions(bladeColor, 2.8f - (y * 0.1f)));
+                new Particle.DustOptions(bladeColor, (float)(2.8 - (y * 0.1))));
         }
         
         // Guard (pelindung tangan) - horizontal
@@ -493,7 +492,7 @@ public class SkillListener implements Listener {
                             255 - ring*40
                         );
                         world.spawnParticle(Particle.DUST, ripple, 0,
-                            new Particle.DustOptions(rippleColor, 1.5f - (r/20f)));
+                            new Particle.DustOptions(rippleColor, (float)(1.5 - (r/20.0)))); // FIX: cast float
                     }
                     r++;
                 }
@@ -514,7 +513,7 @@ public class SkillListener implements Listener {
                 public void run() {
                     if (h > 12) { this.cancel(); return; }
                     world.spawnParticle(Particle.DUST, pillarBase.clone().add(0, h, 0), 2,
-                        new Particle.DustOptions(Color.fromRGB(255, 240, 200), 2.0f - (h/10f)));
+                        new Particle.DustOptions(Color.fromRGB(255, 240, 200), (float)(2.0 - (h/10.0)))); // FIX: cast float
                     h++;
                 }
             }.runTaskTimer(plugin, 0L, 2L);
@@ -610,14 +609,14 @@ public class SkillListener implements Listener {
         // Sequence teleport + hit
         new BukkitRunnable() {
             int i = 0;
-            Location last = p.getLocation();
+            Location last = p.getLocation().clone(); // FIX: clone location
             @Override
             public void run() {
                 if (i >= targets.size()) {
                     // Return to last target position
                     LivingEntity lastTarget = targets.get(targets.size() - 1);
-                    p.teleport(lastTarget.getLocation().add(
-                        lastTarget.getLocation().getDirection().multiply(-1.8).setY(0)
+                    p.teleport(lastTarget.getLocation().clone().add(
+                        lastTarget.getLocation().getDirection().clone().multiply(-1.8).setY(0)
                     ));
                     p.removePotionEffect(PotionEffectType.INVISIBILITY);
                     
@@ -636,8 +635,8 @@ public class SkillListener implements Listener {
                 }
                 
                 LivingEntity curr = targets.get(i);
-                drawTrail(last, curr.getLocation(), Color.fromRGB(255, 215, 0));
-                p.teleport(curr.getLocation().add(0, 0.3, 0)); // Sedikit di atas
+                drawTrail(p.getWorld(), last, curr.getLocation(), Color.fromRGB(255, 215, 0)); // FIX: pass world
+                p.teleport(curr.getLocation().clone().add(0, 0.3, 0)); // Sedikit di atas
                 curr.damage(BLINK_DAMAGE, p);
                 
                 // Hit feedback
@@ -646,7 +645,7 @@ public class SkillListener implements Listener {
                 p.getWorld().spawnParticle(Particle.DUST, curr.getLocation(), 15,
                     new Particle.DustOptions(Color.fromRGB(255, 100, 100), 2f));
                 
-                last = curr.getLocation();
+                last = curr.getLocation().clone(); // FIX: clone location
                 i++;
             }
         }.runTaskTimer(plugin, 0L, 3L);
@@ -671,7 +670,7 @@ public class SkillListener implements Listener {
             @Override
             public void run() {
                 if (trailTicks >= MM_DELAY_TICKS) { this.cancel(); return; }
-                p.getWorld().spawnParticle(Particle.DUST, p.getLocation().add(0, 0.5, 0), 4,
+                p.getWorld().spawnParticle(Particle.DUST, p.getLocation().clone().add(0, 0.5, 0), 4, // FIX: clone
                     new Particle.DustOptions(Color.fromRGB(180, 200, 255), 1.5f));
                 trailTicks++;
             }
@@ -682,7 +681,7 @@ public class SkillListener implements Listener {
             @Override
             public void run() {
                 // Burst forward
-                p.setVelocity(dir.multiply(MM_FORWARD_MULTIPLIER));
+                p.setVelocity(dir.clone().multiply(MM_FORWARD_MULTIPLIER));
                 
                 // Impact visual
                 p.getWorld().spawnParticle(Particle.FLASH, p.getLocation(), 10);
@@ -691,7 +690,7 @@ public class SkillListener implements Listener {
                 p.getWorld().playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 1.3f);
                 
                 // Damage ke entity di depan
-                Location front = p.getLocation().add(dir.multiply(2.5));
+                Location front = p.getLocation().clone().add(dir.clone().multiply(2.5)); // FIX: clone
                 p.getWorld().getNearbyEntities(front, 3, 2.5, 3).forEach(en -> {
                     if (en instanceof LivingEntity le && !en.equals(p) && !en.isDead()) {
                         le.damage(MM_DAMAGE, p);
@@ -704,28 +703,31 @@ public class SkillListener implements Listener {
     }
 
     // ========================================================================
-    // ✨ HELPER METHODS
+    // ✨ HELPER METHODS - FIXED
     // ========================================================================
-    private void drawTrail(Location from, Location to, Color color) {
+    
+    // FIX #1: Tambahkan parameter World, hapus referensi 'p' yang tidak valid
+    private void drawTrail(World world, Location from, Location to, Color color) {
         Vector step = to.toVector().subtract(from.toVector()).normalize().multiply(0.35);
         double dist = from.distance(to);
         Location current = from.clone();
         
         for (double d = 0; d < dist; d += 0.35) {
             current.add(step);
-            p.getWorld().spawnParticle(Particle.DUST, current, 2,
+            world.spawnParticle(Particle.DUST, current, 2,
                 new Particle.DustOptions(color, 2.0f));
         }
     }
     
-    private void drawLine(Location from, Location to, Particle particle, Object options, double stepSize) {
+    // FIX #2: Tambahkan parameter World, hapus referensi 'p' yang tidak valid
+    private void drawLine(World world, Location from, Location to, Particle particle, Object options, double stepSize) {
         Vector direction = to.toVector().subtract(from.toVector()).normalize();
         double distance = from.distance(to);
         Location current = from.clone();
         
         for (double d = 0; d < distance; d += stepSize) {
             if (particle == Particle.DUST && options instanceof Particle.DustOptions) {
-                p.getWorld().spawnParticle(Particle.DUST, current, 0, (Particle.DustOptions) options);
+                world.spawnParticle(Particle.DUST, current, 0, (Particle.DustOptions) options);
             }
             current.add(direction.clone().multiply(stepSize));
         }
@@ -740,4 +742,4 @@ public class SkillListener implements Listener {
         return item.hasItemMeta() && 
                item.getItemMeta().getPersistentDataContainer().has(plugin.SWORD_KEY, PersistentDataType.BYTE);
     }
-                                                            }
+                        }
