@@ -1,5 +1,9 @@
+# =====================================
+# Golden Moon Event Config
+# =====================================
+
 # Pengaturan Waktu Daily Reset (WIB / Indonesia)
-# Jika diset 6, maka jam 6 pagi WIB hadiah baru bisa diklaim (Jam 11 malam Abidjan).
+# Jika diset 6, maka jam 6 pagi WIB hadiah baru bisa diklaim
 daily-reset-hour-wib: 6
 
 # Jam Minecraft (0-24000)
@@ -15,3 +19,58 @@ welcome-message: "&6&l[!] &eWelcome to the &6Golden Moon &eEvent!"
 daily-claimed: "&e&l[Daily] &fYou reached &bDay %day%&f progress!"
 skill-cooldown: "&c[!] Skill is on cooldown: %time%s"
 limited-item-received: "&b&l[!] AMAZING! You received the &6Golden Crescent Blade!"
+
+# =====================================
+# Heavenly Sword Skill
+# =====================================
+
+heavenly-sword:
+
+  enabled: true
+
+  cooldown: 120
+
+  worldguard:
+    enabled: true
+    deny-regions:
+      - spawn
+      - safezone
+      - nopvp
+
+  requirements:
+    min-players-nearby: 2
+    radius-check: 15
+
+  arena:
+    radius: 12
+    golden-circle: true
+    particle: END_ROD
+    particle-count: 200
+
+  player-pose:
+    type: SITTING
+    freeze: true
+    duration: 100
+
+  giant-sword:
+    enabled: true
+    height: 30
+    descent-speed: 0.4
+    explosion-power: 4
+    knockback: 2.5
+
+  sword-rain:
+    enabled: true
+    amount: 25
+    spawn-height: 20
+    delay-ticks: 4
+    damage: 6
+
+  camera-shake:
+    enabled: true
+    duration: 60
+    strength: 0.6
+
+  sounds:
+    start: ENTITY_WITHER_SPAWN
+    impact: ENTITY_GENERIC_EXPLODE
