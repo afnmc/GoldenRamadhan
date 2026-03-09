@@ -1,13 +1,11 @@
-package me.plugin.skills;
+package com.ramadhan;
 
 import org.bukkit.*;
-import org.bukkit.block.Block;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.*;
 import org.bukkit.event.*;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.player.PlayerToggleSneakEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
@@ -16,12 +14,12 @@ import java.util.*;
 
 public class SkillListener implements Listener {
 
-    private JavaPlugin plugin;
-    private FileConfiguration config;
+    private final JavaPlugin plugin;
+    private final FileConfiguration config;
 
-    private Map<UUID, Long> blinkCD = new HashMap<>();
-    private Map<UUID, Long> dashCD = new HashMap<>();
-    private Map<UUID, Long> domainCD = new HashMap<>();
+    private final Map<UUID, Long> blinkCD = new HashMap<>();
+    private final Map<UUID, Long> dashCD = new HashMap<>();
+    private final Map<UUID, Long> domainCD = new HashMap<>();
 
     public SkillListener(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -30,27 +28,32 @@ public class SkillListener implements Listener {
 
     // ===============================
     // BLINK LIGHTNING CHAIN
+    // jump + hit (player di udara)
     // ===============================
 
     @EventHandler
-    public void onHit(EntityDamageByEntityEvent e) {
+    public void onBlinkAttack(EntityDamageByEntityEvent e) {
 
         if (!(e.getDamager() instanceof Player)) return;
 
         Player p = (Player) e.getDamager();
 
-        if (!p.isJumping()) return;
+        // aktif jika player sedang di udara
+        if (p.isOnGround()) return;
 
         if (cooldown(blinkCD, p, "skills.blink.cooldown")) return;
 
         double range = config.getDouble("skills.blink.range");
+        double damage = config.getDouble("skills.blink.damage");
 
         List<LivingEntity> targets = new ArrayList<>();
 
         for (Entity en : p.getNearbyEntities(range, range, range)) {
+
             if (en instanceof LivingEntity && en != p) {
                 targets.add((LivingEntity) en);
             }
+
         }
 
         if (targets.isEmpty()) return;
@@ -70,57 +73,66 @@ public class SkillListener implements Listener {
 
                 LivingEntity target = targets.get(index);
 
-                Location loc = target.getLocation().add(0,1,0);
+                Location loc = target.getLocation().add(0, 1, 0);
 
                 p.teleport(loc);
 
-                target.damage(config.getDouble("skills.blink.damage"), p);
+                target.damage(damage, p);
 
+                // lightning chain
+                loc.getWorld().strikeLightningEffect(loc);
+
+                // particle trail
                 loc.getWorld().spawnParticle(
                         Particle.valueOf(config.getString("skills.blink.particle")),
-                        loc, 30, 0.5,0.5,0.5
+                        loc,
+                        40,
+                        0.5,0.5,0.5
                 );
-
-                loc.getWorld().strikeLightningEffect(loc);
 
                 index++;
 
             }
 
-        }.runTaskTimer(plugin,0, config.getInt("skills.blink.speed-tick"));
+        }.runTaskTimer(plugin, 0, config.getInt("skills.blink.speed-tick"));
     }
 
 
     // ===============================
     // DASH MUNDUR MAJU
+    // sneak + hit
     // ===============================
 
     @EventHandler
-    public void onSneakHit(EntityDamageByEntityEvent e){
+    public void onDashAttack(EntityDamageByEntityEvent e) {
 
-        if(!(e.getDamager() instanceof Player)) return;
+        if (!(e.getDamager() instanceof Player)) return;
 
         Player p = (Player) e.getDamager();
 
-        if(!p.isSneaking()) return;
+        if (!p.isSneaking()) return;
 
-        if(cooldown(dashCD,p,"skills.dash.cooldown")) return;
+        if (cooldown(dashCD, p, "skills.dash.cooldown")) return;
 
-        Vector back = p.getLocation().getDirection().multiply(-config.getDouble("skills.dash.dash-back"));
+        double back = config.getDouble("skills.dash.dash-back");
+        double forward = config.getDouble("skills.dash.dash-forward");
+        double damage = config.getDouble("skills.dash.damage");
 
-        p.setVelocity(back);
+        Vector backVector = p.getLocation().getDirection().multiply(-back);
+
+        p.setVelocity(backVector);
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
 
-            Vector forward = p.getLocation().getDirection().multiply(config.getDouble("skills.dash.dash-forward"));
+            Vector forwardVector = p.getLocation().getDirection().multiply(forward);
 
-            p.setVelocity(forward);
+            p.setVelocity(forwardVector);
 
-            for(Entity en : p.getNearbyEntities(3,3,3)){
+            for (Entity en : p.getNearbyEntities(3,3,3)) {
 
-                if(en instanceof LivingEntity){
+                if (en instanceof LivingEntity && en != p) {
 
-                    ((LivingEntity) en).damage(config.getDouble("skills.dash.damage"),p);
+                    ((LivingEntity) en).damage(damage, p);
 
                 }
 
@@ -133,42 +145,44 @@ public class SkillListener implements Listener {
                     1,1,1
             );
 
-        },6);
+        }, 6);
 
     }
 
 
     // ===============================
-    // DOMAIN SWORD 15x15
+    // DOMAIN SWORD
+    // sneak + right click
     // ===============================
 
     @EventHandler
-    public void onRightClick(PlayerInteractEvent e){
+    public void onDomain(PlayerInteractEvent e) {
 
         Player p = e.getPlayer();
 
-        if(!p.isSneaking()) return;
+        if (!p.isSneaking()) return;
 
-        if(cooldown(domainCD,p,"skills.domain.cooldown")) return;
+        if (!e.getAction().toString().contains("RIGHT")) return;
+
+        if (cooldown(domainCD, p, "skills.domain.cooldown")) return;
 
         Location center = p.getLocation();
-
         World w = center.getWorld();
 
         p.sendMessage(ChatColor.translateAlternateColorCodes('&',
                 config.getString("messages.domain")));
 
-        // SKY CRACK EFFECT
+        // SKY CRACK
 
-        new BukkitRunnable(){
+        new BukkitRunnable() {
 
-            int t = 0;
+            int tick = 0;
 
-            public void run(){
+            public void run() {
 
-                if(t > 40){
+                if (tick > 40) {
                     cancel();
-                    spawnSword(center,p);
+                    spawnSword(center, p);
                     return;
                 }
 
@@ -181,15 +195,16 @@ public class SkillListener implements Listener {
                         2,2,2
                 );
 
-                t++;
+                tick++;
 
             }
 
-        }.runTaskTimer(plugin,0,2);
+        }.runTaskTimer(plugin, 0, 2);
 
-        // RUNE CIRCLE
 
-        for(double angle = 0; angle < 360; angle += 10){
+        // MAGIC RUNE CIRCLE
+
+        for (double angle = 0; angle < 360; angle += 10) {
 
             double x = Math.cos(Math.toRadians(angle)) * 7;
             double z = Math.sin(Math.toRadians(angle)) * 7;
@@ -207,48 +222,49 @@ public class SkillListener implements Listener {
 
     }
 
+
     // ===============================
     // SWORD FALL
     // ===============================
 
-    private void spawnSword(Location loc, Player p){
+    private void spawnSword(Location loc, Player p) {
 
         World w = loc.getWorld();
 
         int size = config.getInt("skills.domain.sword.size");
-
         int height = config.getInt("skills.domain.sword.height");
 
         Material mat = Material.valueOf(config.getString("skills.domain.sword.block"));
 
-        new BukkitRunnable(){
+        new BukkitRunnable() {
 
             int y = height;
 
-            public void run(){
+            public void run() {
 
-                if(y <= 0){
+                if (y <= 0) {
 
-                    impact(loc,p);
+                    impact(loc, p);
 
                     cancel();
                     return;
+
                 }
 
-                for(int x=-size/2; x<=size/2; x++){
-                    for(int z=-size/2; z<=size/2; z++){
+                for (int x = -size/2; x <= size/2; x++) {
+                    for (int z = -size/2; z <= size/2; z++) {
 
-                        Location b = loc.clone().add(x,y,z);
+                        Location blockLoc = loc.clone().add(x,y,z);
 
-                        if(b.getBlock().getType() == Material.AIR){
+                        if (blockLoc.getBlock().getType() == Material.AIR) {
 
-                            b.getBlock().setType(mat);
+                            blockLoc.getBlock().setType(mat);
 
                             Bukkit.getScheduler().runTaskLater(plugin, () -> {
 
-                                b.getBlock().setType(Material.AIR);
+                                blockLoc.getBlock().setType(Material.AIR);
 
-                            },40);
+                            }, 40);
 
                         }
 
@@ -259,7 +275,7 @@ public class SkillListener implements Listener {
 
             }
 
-        }.runTaskTimer(plugin,0,1);
+        }.runTaskTimer(plugin, 0, 1);
 
     }
 
@@ -268,7 +284,7 @@ public class SkillListener implements Listener {
     // IMPACT
     // ===============================
 
-    private void impact(Location loc, Player p){
+    private void impact(Location loc, Player p) {
 
         World w = loc.getWorld();
 
@@ -278,13 +294,13 @@ public class SkillListener implements Listener {
                 10
         );
 
-        w.playSound(loc, Sound.ENTITY_GENERIC_EXPLODE,2,0.6f);
+        w.playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 2, 0.6f);
 
         double radius = config.getDouble("skills.domain.impact.radius");
 
-        for(Entity en : w.getNearbyEntities(loc,radius,radius,radius)){
+        for (Entity en : w.getNearbyEntities(loc, radius, radius, radius)) {
 
-            if(en instanceof LivingEntity){
+            if (en instanceof LivingEntity && en != p) {
 
                 ((LivingEntity) en).damage(
                         config.getDouble("skills.domain.impact.damage"),
@@ -295,47 +311,28 @@ public class SkillListener implements Listener {
 
         }
 
-        // GROUND CRACK VISUAL
-
-        for(int i=0;i<40;i++){
-
-            double x = (Math.random()-0.5)*radius*2;
-            double z = (Math.random()-0.5)*radius*2;
-
-            Location crack = loc.clone().add(x,0,z);
-
-            w.spawnParticle(
-                    Particle.valueOf(config.getString("skills.domain.impact.ground-crack-particle")),
-                    crack,
-                    20,
-                    0.3,0.1,0.3,
-                    Material.STONE.createBlockData()
-            );
-
-        }
-
     }
 
 
     // ===============================
-    // COOLDOWN
+    // COOLDOWN SYSTEM
     // ===============================
 
-    private boolean cooldown(Map<UUID,Long> map, Player p, String path){
+    private boolean cooldown(Map<UUID, Long> map, Player p, String path) {
 
         int cd = config.getInt(path);
 
         long now = System.currentTimeMillis();
 
-        if(map.containsKey(p.getUniqueId())){
+        if (map.containsKey(p.getUniqueId())) {
 
             long diff = (now - map.get(p.getUniqueId())) / 1000;
 
-            if(diff < cd){
+            if (diff < cd) {
 
                 p.sendMessage(ChatColor.translateAlternateColorCodes('&',
                         config.getString("messages.skill-cooldown")
-                                .replace("%time%",String.valueOf(cd-diff))));
+                                .replace("%time%", String.valueOf(cd - diff))));
 
                 return true;
 
