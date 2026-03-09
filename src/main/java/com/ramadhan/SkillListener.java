@@ -1,12 +1,14 @@
 package com.ramadhan;
 
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.*;
 import org.bukkit.event.*;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
@@ -14,336 +16,145 @@ import java.util.*;
 
 public class SkillListener implements Listener {
 
-    private final JavaPlugin plugin;
-    private final FileConfiguration config;
+    private final GoldenMoon plugin;
+    private final Map<UUID, Integer> chargeStack = new HashMap<>();
+    private final Map<UUID, Long> cooldowns = new HashMap<>();
+    private final Set<UUID> ultimateActive = new HashSet<>();
 
-    private final Map<UUID, Long> blinkCD = new HashMap<>();
-    private final Map<UUID, Long> dashCD = new HashMap<>();
-    private final Map<UUID, Long> domainCD = new HashMap<>();
-
-    public SkillListener(JavaPlugin plugin) {
+    public SkillListener(GoldenMoon plugin) {
         this.plugin = plugin;
-        this.config = plugin.getConfig();
     }
 
-    // ===============================
-    // BLINK LIGHTNING CHAIN
-    // jump + hit (player di udara)
-    // ===============================
-
-    @EventHandler
-    public void onBlinkAttack(EntityDamageByEntityEvent e) {
-
-        if (!(e.getDamager() instanceof Player)) return;
-
-        Player p = (Player) e.getDamager();
-
-        // aktif jika player sedang di udara
-        if (p.isOnGround()) return;
-
-        if (cooldown(blinkCD, p, "skills.blink.cooldown")) return;
-
-        double range = config.getDouble("skills.blink.range");
-        double damage = config.getDouble("skills.blink.damage");
-
-        List<LivingEntity> targets = new ArrayList<>();
-
-        for (Entity en : p.getNearbyEntities(range, range, range)) {
-
-            if (en instanceof LivingEntity && en != p) {
-                targets.add((LivingEntity) en);
-            }
-
+    // --- UTILS: Cooldown & Pengecekan ---
+    private boolean checkCD(Player p, String skill, int sec) {
+        long last = cooldowns.getOrDefault(p.getUniqueId() + skill, 0L);
+        if (System.currentTimeMillis() - last < (sec * 1000L)) {
+            p.sendMessage("§c§l[!] §7Skill " + skill + " sedang cooldown!");
+            return false;
         }
-
-        if (targets.isEmpty()) return;
-
-        Collections.shuffle(targets);
-
-        new BukkitRunnable() {
-
-            int index = 0;
-
-            public void run() {
-
-                if (index >= targets.size()) {
-                    cancel();
-                    return;
-                }
-
-                LivingEntity target = targets.get(index);
-
-                Location loc = target.getLocation().add(0, 1, 0);
-
-                p.teleport(loc);
-
-                target.damage(damage, p);
-
-                // lightning chain
-                loc.getWorld().strikeLightningEffect(loc);
-
-                // particle trail
-                loc.getWorld().spawnParticle(
-                        Particle.valueOf(config.getString("skills.blink.particle")),
-                        loc,
-                        40,
-                        0.5,0.5,0.5
-                );
-
-                index++;
-
-            }
-
-        }.runTaskTimer(plugin, 0, config.getInt("skills.blink.speed-tick"));
+        cooldowns.put(p.getUniqueId() + skill, System.currentTimeMillis());
+        return true;
     }
 
-
-    // ===============================
-    // DASH MUNDUR MAJU
-    // sneak + hit
-    // ===============================
-
-    @EventHandler
-    public void onDashAttack(EntityDamageByEntityEvent e) {
-
-        if (!(e.getDamager() instanceof Player)) return;
-
-        Player p = (Player) e.getDamager();
-
-        if (!p.isSneaking()) return;
-
-        if (cooldown(dashCD, p, "skills.dash.cooldown")) return;
-
-        double back = config.getDouble("skills.dash.dash-back");
-        double forward = config.getDouble("skills.dash.dash-forward");
-        double damage = config.getDouble("skills.dash.damage");
-
-        Vector backVector = p.getLocation().getDirection().multiply(-back);
-
-        p.setVelocity(backVector);
-
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-
-            Vector forwardVector = p.getLocation().getDirection().multiply(forward);
-
-            p.setVelocity(forwardVector);
-
-            for (Entity en : p.getNearbyEntities(3,3,3)) {
-
-                if (en instanceof LivingEntity && en != p) {
-
-                    ((LivingEntity) en).damage(damage, p);
-
-                }
-
-            }
-
-            p.getWorld().spawnParticle(
-                    Particle.valueOf(config.getString("skills.dash.particle")),
-                    p.getLocation(),
-                    40,
-                    1,1,1
-            );
-
-        }, 6);
-
+    private boolean isHoldingSword(Player p) {
+        ItemStack item = p.getInventory().getItemInMainHand();
+        return item != null && item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(plugin.SWORD_KEY, PersistentDataType.BYTE);
     }
 
+    // --- EVENT: COMBAT (Blink & Dash) ---
+    @EventHandler
+    public void onCombat(EntityDamageByEntityEvent e) {
+        if (!(e.getDamager() instanceof Player p) || !isHoldingSword(p)) return;
+        if (!(e.getEntity() instanceof LivingEntity target)) return;
 
-    // ===============================
-    // DOMAIN SWORD
-    // sneak + right click
-    // ===============================
+        int stack = chargeStack.getOrDefault(p.getUniqueId(), 0);
+
+        // SKILL 1: BLINK (Lompat + Hit)
+        if (!p.isOnGround() && stack < 3) {
+            if (checkCD(p, "Blink", 3)) executeBlink(p, target);
+        }
+        // SKILL 2: DASH (Sneak + Hit, Stack 3-4)
+        else if (p.isSneaking() && stack >= 3 && stack < 5) {
+            if (checkCD(p, "Dash", 5)) {
+                executeDash(p);
+                chargeStack.put(p.getUniqueId(), 0);
+            }
+        }
+        // STACKING
+        else if (stack < 5) {
+            stack++;
+            chargeStack.put(p.getUniqueId(), stack);
+            p.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent("§e§l✦ Stack: " + stack + " / 5"));
+        }
+    }
 
     @EventHandler
-    public void onDomain(PlayerInteractEvent e) {
-
+    public void onInteract(PlayerInteractEvent e) {
         Player p = e.getPlayer();
+        if (!isHoldingSword(p) || chargeStack.getOrDefault(p.getUniqueId(), 0) < 5) return;
 
-        if (!p.isSneaking()) return;
-
-        if (!e.getAction().toString().contains("RIGHT")) return;
-
-        if (cooldown(domainCD, p, "skills.domain.cooldown")) return;
-
-        Location center = p.getLocation();
-        World w = center.getWorld();
-
-        p.sendMessage(ChatColor.translateAlternateColorCodes('&',
-                config.getString("messages.domain")));
-
-        // SKY CRACK
-
-        new BukkitRunnable() {
-
-            int tick = 0;
-
-            public void run() {
-
-                if (tick > 40) {
-                    cancel();
-                    spawnSword(center, p);
-                    return;
-                }
-
-                Location sky = center.clone().add(0,25,0);
-
-                w.spawnParticle(
-                        Particle.valueOf(config.getString("skills.domain.sky-crack-particle")),
-                        sky,
-                        40,
-                        2,2,2
-                );
-
-                tick++;
-
+        if (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            if (checkCD(p, "Domain", 30)) {
+                chargeStack.put(p.getUniqueId(), 0);
+                executeDomain(p);
             }
-
-        }.runTaskTimer(plugin, 0, 2);
-
-
-        // MAGIC RUNE CIRCLE
-
-        for (double angle = 0; angle < 360; angle += 10) {
-
-            double x = Math.cos(Math.toRadians(angle)) * 7;
-            double z = Math.sin(Math.toRadians(angle)) * 7;
-
-            Location rune = center.clone().add(x,0.1,z);
-
-            w.spawnParticle(
-                    Particle.valueOf(config.getString("skills.domain.rune-particle")),
-                    rune,
-                    5,
-                    0,0,0
-            );
-
         }
-
     }
 
-
-    // ===============================
-    // SWORD FALL
-    // ===============================
-
-    private void spawnSword(Location loc, Player p) {
-
-        World w = loc.getWorld();
-
-        int size = config.getInt("skills.domain.sword.size");
-        int height = config.getInt("skills.domain.sword.height");
-
-        Material mat = Material.valueOf(config.getString("skills.domain.sword.block"));
-
+    // --- SKILL 1: BLINK ---
+    private void executeBlink(Player p, LivingEntity target) {
+        target.setVelocity(new Vector(0, 1.2, 0));
         new BukkitRunnable() {
-
-            int y = height;
-
             public void run() {
+                p.teleport(target.getLocation().subtract(target.getLocation().getDirection().multiply(1.5)));
+                p.getWorld().spawnParticle(Particle.SWEEP_ATTACK, p.getLocation(), 10);
+                target.damage(15.0, p);
+                target.setVelocity(new Vector(0, -2.5, 0));
+            }
+        }.runTaskLater(plugin, 3L);
+    }
 
-                if (y <= 0) {
+    // --- SKILL 2: DASH ---
+    private void executeDash(Player p) {
+        Vector dir = p.getLocation().getDirection().setY(0).normalize();
+        p.setVelocity(dir.multiply(5));
+        p.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, p.getLocation(), 5);
+        p.getNearbyEntities(5, 3, 5).forEach(en -> {
+            if (en instanceof LivingEntity le && !en.equals(p)) le.damage(25.0, p);
+        });
+    }
 
-                    impact(loc, p);
-
-                    cancel();
-                    return;
-
+    // --- SKILL 3: DOMAIN & PEDANG KHUSUS ---
+    private void executeDomain(Player p) {
+        Location center = p.getLocation();
+        new BukkitRunnable() {
+            double r = 0; int ticks = 0;
+            public void run() {
+                if (r < 12) r += 0.5;
+                for (int i = 0; i < 6; i++) {
+                    double a = Math.toRadians(i * 60 + ticks * 10);
+                    Location pos = center.clone().add(Math.cos(a)*r, 0.2, Math.sin(a)*r);
+                    p.getWorld().spawnParticle(Particle.DUST, pos, 2, new Particle.DustOptions(Color.YELLOW, 2.0f));
                 }
+                if (ticks++ > 60) { dropSword(center, p); this.cancel(); }
+            }
+        }.runTaskTimer(plugin, 0, 1);
+    }
 
-                for (int x = -size/2; x <= size/2; x++) {
-                    for (int z = -size/2; z <= size/2; z++) {
+    private void dropSword(Location center, Player p) {
+        new BukkitRunnable() {
+            int frame = 0;
+            public void run() {
+                double y = 25 - (frame * 2.5);
+                Location b = center.clone().add(0, y, 0);
 
-                        Location blockLoc = loc.clone().add(x,y,z);
-
-                        if (blockLoc.getBlock().getType() == Material.AIR) {
-
-                            blockLoc.getBlock().setType(mat);
-
-                            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-
-                                blockLoc.getBlock().setType(Material.AIR);
-
-                            }, 40);
-
-                        }
-
+                // 1. BILAH UTAMA (Runcing)
+                for(double h=0; h<12; h+=0.2) {
+                    double w = (12 - h) * 0.06;
+                    for(double x = -w; x <= w; x += 0.2) {
+                        center.getWorld().spawnParticle(Particle.DUST, b.clone().add(x, h, 0), 1, new Particle.DustOptions(Color.SILVER, 1.0f));
                     }
                 }
+                // 2. CROSSGUARD MELENGKUNG (Sesuai Gambar)
+                for(double x = -3; x <= 3; x += 0.2) {
+                    double curve = Math.sin(Math.abs(x) * 1.5) * 1.5;
+                    center.getWorld().spawnParticle(Particle.DUST, b.clone().add(x, 12 + curve, 0), 1, new Particle.DustOptions(Color.YELLOW, 1.5f));
+                }
+                // 3. GAGANG
+                for(double h=12; h<16; h+=0.2) {
+                    center.getWorld().spawnParticle(Particle.DUST, b.clone().add(0, h, 0), 1, new Particle.DustOptions(Color.fromRGB(200, 150, 50), 1.0f));
+                }
 
-                y--;
-
+                if (y <= 0) {
+                    center.getWorld().spawnParticle(Particle.EXPLOSION_HUGE, center, 1);
+                    center.getNearbyEntities(12, 5, 12).forEach(en -> {
+                        if (en instanceof LivingEntity le && !en.equals(p)) le.damage(60.0, p);
+                    });
+                    this.cancel();
+                }
+                frame++;
             }
-
         }.runTaskTimer(plugin, 0, 1);
-
     }
-
-
-    // ===============================
-    // IMPACT
-    // ===============================
-
-    private void impact(Location loc, Player p) {
-
-        World w = loc.getWorld();
-
-        w.spawnParticle(
-                Particle.valueOf(config.getString("skills.domain.impact.shockwave-particle")),
-                loc,
-                10
-        );
-
-        w.playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 2, 0.6f);
-
-        double radius = config.getDouble("skills.domain.impact.radius");
-
-        for (Entity en : w.getNearbyEntities(loc, radius, radius, radius)) {
-
-            if (en instanceof LivingEntity && en != p) {
-
-                ((LivingEntity) en).damage(
-                        config.getDouble("skills.domain.impact.damage"),
-                        p
-                );
-
-            }
-
-        }
-
-    }
-
-
-    // ===============================
-    // COOLDOWN SYSTEM
-    // ===============================
-
-    private boolean cooldown(Map<UUID, Long> map, Player p, String path) {
-
-        int cd = config.getInt(path);
-
-        long now = System.currentTimeMillis();
-
-        if (map.containsKey(p.getUniqueId())) {
-
-            long diff = (now - map.get(p.getUniqueId())) / 1000;
-
-            if (diff < cd) {
-
-                p.sendMessage(ChatColor.translateAlternateColorCodes('&',
-                        config.getString("messages.skill-cooldown")
-                                .replace("%time%", String.valueOf(cd - diff))));
-
-                return true;
-
-            }
-
-        }
-
-        map.put(p.getUniqueId(), now);
-
-        return false;
-
-    }
-
 }
+
