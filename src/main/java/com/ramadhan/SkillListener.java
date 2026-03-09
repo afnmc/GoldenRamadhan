@@ -420,4 +420,4 @@ public class SkillListener implements Listener {
         return item != null && item.hasItemMeta() && 
                item.getItemMeta().getPersistentDataContainer().has(plugin.SWORD_KEY, PersistentDataType.BYTE);
     }
-                        }
+                    }
