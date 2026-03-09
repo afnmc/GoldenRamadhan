@@ -28,7 +28,7 @@ public class SkillListener implements Listener {
         this.plugin = plugin;
     }
 
-    // --- ANTI FALL DAMAGE SAAT SKILL ---
+    // --- PROTEKSI FALL DAMAGE (BIAR GAK MATI PAS COMBO) ---
     @EventHandler(ignoreCancelled = true)
     public void onFall(EntityDamageEvent e) {
         if (e.getCause() == EntityDamageEvent.DamageCause.FALL && immunityFrame.contains(e.getEntity().getUniqueId())) {
@@ -37,7 +37,7 @@ public class SkillListener implements Listener {
         }
     }
 
-    // --- COMBAT & SKILL TRIGGER ---
+    // --- LOGIC COMBAT & SKILL ---
     @EventHandler
     public void onCombat(EntityDamageByEntityEvent e) {
         if (!(e.getDamager() instanceof Player p) || !isHoldingSword(p)) return;
@@ -46,7 +46,7 @@ public class SkillListener implements Listener {
         UUID id = p.getUniqueId();
         int stack = chargeStack.getOrDefault(id, 0);
 
-        // STACKING LOGIC
+        // SYSTEM STACKING (MAX 5)
         if (stack < 5) {
             stack++;
             chargeStack.put(id, stack);
@@ -55,19 +55,20 @@ public class SkillListener implements Listener {
             if (stack == 5) p.sendTitle("§f§l⚡", "§eKLIK KANAN: ULTIMATE", 5, 30, 5);
         }
 
-        // SKILL 1: BLINK COMBO (SNEAK + HIT)
+        // SKILL 1: BLINK LOMPAT (SNEAK + HIT) - Syarat Stack < 3
         if (p.isSneaking() && stack < 3) {
             executeBlinkCombo(p, target);
+            return;
         }
 
-        // SKILL 2: MAJU MUNDUR (SNEAK + STACK 3-4)
+        // SKILL 2: MAJU MUNDUR (SNEAK + HIT) - Syarat Stack 3-4
         if (p.isSneaking() && stack >= 3 && stack < 5) {
             executeMajuMundur(p);
             chargeStack.put(id, 0);
         }
     }
 
-    // --- INSTANT ULTIMATE ---
+    // --- TRIGGER ULTIMATE (KLIK KANAN INSTAN) ---
     @EventHandler
     public void onInteract(PlayerInteractEvent e) {
         Player p = e.getPlayer();
@@ -82,58 +83,80 @@ public class SkillListener implements Listener {
         }
     }
 
+    // ==========================================
+    // SKILL 1: BLINK (LOMPAT & TEBAS UDARA)
+    // ==========================================
     private void executeBlinkCombo(Player p, LivingEntity target) {
-        Location startLoc = p.getLocation().clone().add(0, 1, 0); 
-        target.setVelocity(new Vector(0, 1.1, 0)); 
+        Location startLoc = p.getLocation().clone().add(0, 1, 0); // Trail dari dada
+        target.setVelocity(new Vector(0, 1.2, 0)); // Terbangkan musuh
         
         new BukkitRunnable() {
             @Override
             public void run() {
                 Location behind = target.getLocation().clone().subtract(target.getLocation().getDirection().multiply(1.5));
-                behind.setY(target.getLocation().getY() + 0.5);
+                behind.setY(target.getLocation().getY() + 0.8);
                 
                 drawTrail(startLoc, behind.clone().add(0, 1, 0), Color.WHITE);
                 p.teleport(behind);
                 
-                p.getWorld().spawnParticle(Particle.SWEEP_ATTACK, target.getLocation().add(0, 1, 0), 2);
+                // Visual Tebasan Udara
+                p.getWorld().spawnParticle(Particle.SWEEP_ATTACK, target.getLocation().add(0, 1, 0), 3, 0.2, 0.2, 0.2, 0);
+                p.getWorld().spawnParticle(Particle.FLASH, target.getLocation().add(0, 1, 0), 1);
                 target.damage(9.0, p);
                 p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1f, 1.8f);
                 
-                target.setVelocity(new Vector(0, -1.8, 0));
+                // Hempaskan Musuh ke Bawah
+                target.setVelocity(new Vector(0, -2.0, 0));
                 immunityFrame.add(p.getUniqueId());
                 new BukkitRunnable() { @Override public void run() { immunityFrame.remove(p.getUniqueId()); } }.runTaskLater(plugin, 40L);
             }
         }.runTaskLater(plugin, 3L);
     }
 
+    // ==========================================
+    // SKILL 2: MAJU MUNDUR (SIDE SLASH AOE)
+    // ==========================================
     private void executeMajuMundur(Player p) {
         Vector dir = p.getLocation().getDirection().setY(0).normalize();
-        p.setVelocity(dir.clone().multiply(-1.6).setY(0.3));
         
-        Location behind = p.getLocation().subtract(dir.clone().multiply(1));
-        p.getWorld().spawnParticle(Particle.EXPLOSION, behind, 3, 0.2, 0.2, 0.2, 0.1);
+        // FASE 1: MUNDUR + LEDAKAN SONIC
+        p.setVelocity(dir.clone().multiply(-1.6).setY(0.3));
+        Location bLoc = p.getLocation().subtract(dir.clone().multiply(1));
+        p.getWorld().spawnParticle(Particle.EXPLOSION, bLoc, 5, 0.3, 0.3, 0.3, 0.1);
+        p.getWorld().spawnParticle(Particle.CLOUD, bLoc, 20, 0.5, 0.5, 0.5, 0.2);
         p.playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 1.5f);
 
+        // FASE 2: MAJU TERJANG + NEBAS SEKITAR
         new BukkitRunnable() {
             @Override
             public void run() {
                 p.setVelocity(dir.clone().multiply(3.8));
                 p.getWorld().playSound(p.getLocation(), Sound.ITEM_TRIDENT_RIPTIDE_3, 1f, 1.2f);
                 
-                p.getNearbyEntities(4.0, 3.0, 4.0).forEach(en -> {
+                // Trail Efek Terjang
+                for(int i=0; i<10; i++) {
+                    p.getWorld().spawnParticle(Particle.DUST, p.getLocation().add(0, 1, 0), 5, new Particle.DustOptions(Color.AQUA, 1.5f));
+                }
+
+                // AoE Damage (Radius 4 block agar kena samping)
+                p.getWorld().getNearbyEntities(p.getLocation(), 4.0, 3.0, 4.0).forEach(en -> {
                     if (en instanceof LivingEntity le && !en.equals(p)) {
                         le.damage(12.0, p);
-                        le.getWorld().spawnParticle(Particle.CRIT, le.getLocation().add(0, 1, 0), 15);
+                        le.getWorld().spawnParticle(Particle.CRIT, le.getLocation().add(0, 1, 0), 15, 0.3, 0.3, 0.3, 0.1);
                     }
                 });
             }
         }.runTaskLater(plugin, 8L);
     }
 
+    // ==========================================
+    // SKILL 3: ULTIMATE GOLDEN DOMAIN
+    // ==========================================
     private void executeGoldenDomain(Player p) {
         Location center = p.getLocation().clone();
-        p.getWorld().playSound(center, Sound.ENTITY_WITHER_SPAWN, 1f, 1.5f);
+        p.getWorld().playSound(center, Sound.ENTITY_WITHER_SPAWN, 1.5f, 1.2f);
         
+        // ANIMASI ARENA HEXAGON
         new BukkitRunnable() {
             int ticks = 0;
             @Override
@@ -143,11 +166,11 @@ public class SkillListener implements Listener {
                     this.cancel();
                     return;
                 }
-                double rotation = ticks * 8;
+                double rotation = ticks * 10;
                 for (int i = 0; i < 6; i++) {
                     double angle = Math.toRadians(i * 60 + rotation);
                     Location corner = center.clone().add(Math.cos(angle) * 10, 0.2, Math.sin(angle) * 10);
-                    p.getWorld().spawnParticle(Particle.DUST, corner, 2, new Particle.DustOptions(Color.YELLOW, 1.5f));
+                    p.getWorld().spawnParticle(Particle.DUST, corner, 3, new Particle.DustOptions(Color.YELLOW, 1.5f));
                 }
                 ticks++;
             }
@@ -155,31 +178,36 @@ public class SkillListener implements Listener {
     }
 
     private void triggerSwordDrop(Player p, Location center) {
-        p.setVelocity(p.getLocation().getDirection().multiply(-1.5).setY(0.4));
+        // Player TP mundur bergaya
+        p.setVelocity(p.getLocation().getDirection().multiply(-1.8).setY(0.5));
         immunityFrame.add(p.getUniqueId());
 
         new BukkitRunnable() {
             int frame = 0;
             @Override
             public void run() {
-                double y = 15 - (frame * 3);
+                double y = 18 - (frame * 3);
                 Location bladeLoc = center.clone().add(0, y, 0);
                 
-                // PEDANG RAKSASA (7 BLOK TINGGI)
-                for(double h=0; h<7; h+=0.5) {
-                    center.getWorld().spawnParticle(Particle.DUST, bladeLoc.clone().add(0, h, 0), 12, new Particle.DustOptions(Color.WHITE, 2.5f));
-                    center.getWorld().spawnParticle(Particle.END_ROD, bladeLoc.clone().add(0, h, 0), 1, 0.1, 0.1, 0.1, 0);
+                // VISUAL PEDANG RAKSASA (FULL RAME)
+                for(double h=0; h<8; h+=0.5) {
+                    center.getWorld().spawnParticle(Particle.DUST, bladeLoc.clone().add(0, h, 0), 15, new Particle.DustOptions(Color.WHITE, 2.5f));
+                    center.getWorld().spawnParticle(Particle.END_ROD, bladeLoc.clone().add(0, h, 0), 2, 0.1, 0.1, 0.1, 0);
+                    center.getWorld().spawnParticle(Particle.DUST, bladeLoc.clone().add(0, h, 0), 5, new Particle.DustOptions(Color.YELLOW, 1.0f));
                 }
 
                 if (y <= 0) {
-                    center.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, center, 5);
-                    center.getWorld().spawnParticle(Particle.FLASH, center, 8, 3, 1, 3, 0);
+                    // IMPACT (LEDAKAN DAHSYAT + TANAH RETAK)
+                    center.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, center, 8);
+                    center.getWorld().spawnParticle(Particle.FLASH, center, 10, 3, 1, 3, 0);
+                    center.getWorld().spawnParticle(Particle.BLOCK, center, 100, 4, 0.5, 4, 0.1, Bukkit.createBlockData(Material.GOLD_BLOCK));
                     center.getWorld().playSound(center, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 2f, 0.5f);
+                    center.getWorld().playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 2f, 0.7f);
                     
-                    center.getNearbyEntities(10, 10, 10).forEach(en -> {
+                    center.getWorld().getNearbyEntities(center, 10.0, 10.0, 10.0).forEach(en -> {
                         if (en instanceof LivingEntity le && !en.equals(p)) {
-                            le.damage(30.0, p);
-                            le.setVelocity(new Vector(0, 1.5, 0));
+                            le.damage(35.0, p);
+                            le.setVelocity(new Vector(0, 1.6, 0));
                         }
                     });
                     new BukkitRunnable() { @Override public void run() { immunityFrame.remove(p.getUniqueId()); } }.runTaskLater(plugin, 40L);
@@ -190,11 +218,12 @@ public class SkillListener implements Listener {
         }.runTaskTimer(plugin, 0, 1);
     }
 
+    // --- HELPER UNTUK TRAIL BLINK ---
     private void drawTrail(Location from, Location to, Color color) {
         Vector vector = to.toVector().subtract(from.toVector());
         double dist = from.distance(to);
-        vector.normalize().multiply(0.5);
-        for (double i = 0; i < dist; i += 0.5) {
+        vector.normalize().multiply(0.4);
+        for (double i = 0; i < dist; i += 0.4) {
             from.getWorld().spawnParticle(Particle.DUST, from.clone().add(vector.clone().multiply(i)), 2, new Particle.DustOptions(color, 1.5f));
         }
     }
