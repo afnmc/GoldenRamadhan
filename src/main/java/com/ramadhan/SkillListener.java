@@ -50,10 +50,10 @@ public class SkillListener implements Listener {
             stack++;
             chargeStack.put(id, stack);
             sendActionBar(p, "§e§l✦ Golden Stack: §f" + stack + "§7/§f5");
-            p.playSound(p.getLocation(), Sound.valueOf("AMETHYST_BLOCK_HIT"), 1f, 1.2f + (stack * 0.2f));
+            p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_HIT, 1f, 1.2f + (stack * 0.2f));
             if (stack == 5) {
                 p.sendTitle("§f§l🌕", "§eKLIK KANAN: GOLDEN MOON DOMAIN", 5, 30, 5);
-                playSoundSafe(p.getLocation(), Sound.valueOf("BELL_RESONATE"), 1f, 1.5f);
+                p.playSound(p.getLocation(), Sound.BLOCK_BELL_RESONATE, 1f, 1.5f);
             }
         }
 
@@ -92,42 +92,47 @@ public class SkillListener implements Listener {
         Location start = p.getLocation().clone();
         target.setVelocity(new Vector(0, 0.8, 0));
         
-        // Sound & Partikel awal
-        playSoundSafe(p.getLocation(), Sound.valueOf("ENDERMAN_TELEPORT"), 0.7f, 1.8f);
+        // Copy ke final variable untuk inner class
+        final Player finalP = p;
+        final LivingEntity finalTarget = target;
+        final World world = p.getWorld();
+        
+        p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 0.7f, 1.8f);
         spawnGoldenParticles(p.getLocation(), 15);
         
         new BukkitRunnable() {
             @Override
             public void run() {
-                Vector dir = target.getLocation().getDirection().setY(0).normalize();
-                Location behind = target.getLocation().clone().subtract(dir.multiply(1.2));
-                behind.setY(target.getLocation().getY() + 0.5);
+                Vector dir = finalTarget.getLocation().getDirection().setY(0).normalize();
+                Location behind = finalTarget.getLocation().clone().subtract(dir.multiply(1.2));
+                behind.setY(finalTarget.getLocation().getY() + 0.5);
                 
-                p.teleport(behind);
+                finalP.teleport(behind);
                 spawnGoldenParticles(behind, 20);
-                playSoundSafe(behind, Sound.valueOf("ENDERMAN_TELEPORT"), 0.7f, 2.2f);
+                finalP.playSound(behind, Sound.ENTITY_ENDERMAN_TELEPORT, 0.7f, 2.2f);
                 
                 // Slash effect (multi-hit visual)
                 for(int i = 0; i < 2; i++) {
-                    final int delay = i * 4;
+                    final int effectIndex = i; // final untuk inner class
                     new BukkitRunnable() {
                         @Override
                         public void run() {
-                            Location hitLoc = target.getLocation().add(0, 1, 0);
-                            target.getWorld().spawnParticle(Particle.CRIT, hitLoc, 15, 0.3, 0.3, 0.3, 0.1);
-                            target.getWorld().spawnParticle(Particle.FLAME, hitLoc, 10, 0.2, 0.2, 0.2, 0);
-                            target.getWorld().spawnParticle(Particle.CLOUD, hitLoc, 8, 0.3, 0.3, 0.3, 0);
-                            playSoundSafe(hitLoc, Sound.valueOf("ENTITY_PLAYER_ATTACK_SWEEP"), 1f, 1.5f + i * 0.3f);
+                            Location hitLoc = finalTarget.getLocation().add(0, 1, 0);
+                            world.spawnParticle(Particle.CRIT, hitLoc, 15, 0.3, 0.3, 0.3, 0.1);
+                            world.spawnParticle(Particle.FLAME, hitLoc, 10, 0.2, 0.2, 0.2, 0);
+                            world.spawnParticle(Particle.CLOUD, hitLoc, 8, 0.3, 0.3, 0.3, 0);
+                            world.spawnParticle(Particle.DUST, hitLoc, 12, new Particle.DustOptions(Color.YELLOW, 1.5f));
+                            finalP.playSound(hitLoc, Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1f, 1.5f + effectIndex * 0.3f);
                         }
-                    }.runTaskLater(plugin, delay);
+                    }.runTaskLater(plugin, i * 4);
                 }
                 
-                target.damage(8.0, p);
-                target.setVelocity(new Vector(0, -1.5, 0));
+                finalTarget.damage(8.0, finalP);
+                finalTarget.setVelocity(new Vector(0, -1.5, 0));
                 spawnGoldenTrail(start, behind, 8);
                 
-                immunityFrame.add(p.getUniqueId());
-                new BukkitRunnable() { @Override public void run() { immunityFrame.remove(p.getUniqueId()); } }.runTaskLater(plugin, 30L);
+                immunityFrame.add(finalP.getUniqueId());
+                new BukkitRunnable() { @Override public void run() { immunityFrame.remove(finalP.getUniqueId()); } }.runTaskLater(plugin, 30L);
             }
         }.runTaskLater(plugin, 4L);
     }
@@ -137,65 +142,69 @@ public class SkillListener implements Listener {
     // ==========================================
     private void executeLunarCrescent(Player p) {
         Vector dir = p.getLocation().getDirection().setY(0).normalize();
+        final Player finalP = p;
+        final World world = p.getWorld();
         
         // FASE 1: Charge effect
-        playSoundSafe(p.getLocation(), Sound.valueOf("BLOCK_BEACON_ACTIVATE"), 0.8f, 1.2f);
+        finalP.playSound(finalP.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 0.8f, 1.2f);
         for(int i = 0; i < 10; i++) {
-            final int delay = i * 2;
+            final int chargeIndex = i;
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    Location chargeLoc = p.getLocation().add(0, 1, 0);
+                    Location chargeLoc = finalP.getLocation().add(0, 1, 0);
                     spawnGoldenParticles(chargeLoc, 5);
-                    p.getWorld().spawnParticle(Particle.FLAME, chargeLoc, 3, 0.2, 0.2, 0.2, 0);
+                    world.spawnParticle(Particle.FLAME, chargeLoc, 3, 0.2, 0.2, 0.2, 0);
+                    world.spawnParticle(Particle.DUST, chargeLoc, 4, new Particle.DustOptions(Color.ORANGE, 1.2f));
                 }
-            }.runTaskLater(plugin, delay);
+            }.runTaskLater(plugin, chargeIndex * 2);
         }
         
         // FASE 2: DASH + SLASH
         new BukkitRunnable() {
             @Override
             public void run() {
-                p.setVelocity(dir.clone().multiply(3.2).setY(0.4));
-                playSoundSafe(p.getLocation(), Sound.valueOf("ITEM_TRIDENT_RIPTIDE_3"), 1f, 1.3f);
+                finalP.setVelocity(dir.clone().multiply(3.2).setY(0.4));
+                finalP.playSound(finalP.getLocation(), Sound.ITEM_TRIDENT_RIPTIDE_3, 1f, 1.3f);
                 
                 // Crescent trail
                 for(int i = 0; i < 12; i++) {
-                    final int idx = i;
+                    final int trailIndex = i;
                     new BukkitRunnable() {
                         @Override
                         public void run() {
-                            Location trailLoc = p.getLocation().add(0, 1, 0);
+                            Location trailLoc = finalP.getLocation().add(0, 1, 0);
                             for(double angle = -45; angle <= 45; angle += 15) {
                                 double rad = Math.toRadians(angle);
                                 Vector offset = new Vector(Math.cos(rad) * 0.8, 0, Math.sin(rad) * 0.8);
                                 Location particleLoc = trailLoc.clone().add(offset);
                                 spawnGoldenParticles(particleLoc, 3);
-                                p.getWorld().spawnParticle(Particle.CRIT, particleLoc, 2, 0.1, 0.1, 0.1, 0);
+                                world.spawnParticle(Particle.CRIT, particleLoc, 2, 0.1, 0.1, 0.1, 0);
                             }
                         }
-                    }.runTaskLater(plugin, idx);
+                    }.runTaskLater(plugin, trailIndex);
                 }
                 
                 // Slash impact
                 new BukkitRunnable() {
                     @Override
                     public void run() {
-                        p.getWorld().spawnParticle(Particle.SWEEP_ATTACK, p.getLocation().add(0, 1, 0), 6, 0.4, 0.4, 0.4, 0);
-                        p.getWorld().spawnParticle(Particle.CRIT, p.getLocation().add(0, 1, 0), 25, 0.5, 0.5, 0.5, 0.1);
-                        p.getWorld().spawnParticle(Particle.FLAME, p.getLocation().add(0, 1, 0), 20, 0.4, 0.4, 0.4, 0.1);
-                        playSoundSafe(p.getLocation(), Sound.valueOf("ENTITY_PLAYER_ATTACK_SWEEP"), 1.3f, 1.6f);
-                        playSoundSafe(p.getLocation(), Sound.valueOf("BLOCK_GLASS_BREAK"), 0.7f, 1.4f);
+                        world.spawnParticle(Particle.SWEEP_ATTACK, finalP.getLocation().add(0, 1, 0), 6, 0.4, 0.4, 0.4, 0);
+                        world.spawnParticle(Particle.CRIT, finalP.getLocation().add(0, 1, 0), 25, 0.5, 0.5, 0.5, 0.1);
+                        world.spawnParticle(Particle.FLAME, finalP.getLocation().add(0, 1, 0), 20, 0.4, 0.4, 0.4, 0.1);
+                        world.spawnParticle(Particle.DUST, finalP.getLocation().add(0, 1, 0), 15, new Particle.DustOptions(Color.YELLOW, 2.0f));
+                        finalP.playSound(finalP.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1.3f, 1.6f);
+                        finalP.playSound(finalP.getLocation(), Sound.BLOCK_GLASS_BREAK, 0.7f, 1.4f);
                         
                         // AOE Damage
-                        p.getWorld().getNearbyEntities(p.getLocation(), 3.5, 2.5, 3.5).forEach(en -> {
-                            if (en instanceof LivingEntity le && !en.equals(p)) {
-                                le.damage(11.0, p);
-                                le.setVelocity(p.getLocation().getDirection().multiply(0.6).setY(0.4));
+                        world.getNearbyEntities(finalP.getLocation(), 3.5, 2.5, 3.5).forEach(en -> {
+                            if (en instanceof LivingEntity le && !en.equals(finalP)) {
+                                le.damage(11.0, finalP);
+                                le.setVelocity(finalP.getLocation().getDirection().multiply(0.6).setY(0.4));
                                 le.setFireTicks(40);
                                 spawnGoldenParticles(le.getLocation().add(0, 1, 0), 12);
                                 le.getWorld().spawnParticle(Particle.CRIT, le.getLocation().add(0, 1, 0), 15, 0.3, 0.3, 0.3, 0.1);
-                                playSoundSafe(le.getLocation(), Sound.valueOf("ENTITY_GENERIC_HURT"), 1f, 1.4f);
+                                le.playSound(le.getLocation(), Sound.ENTITY_GENERIC_HURT, 1f, 1.4f);
                             }
                         });
                     }
@@ -209,10 +218,12 @@ public class SkillListener implements Listener {
     // ==========================================
     private void executeGoldenMoonDomain(Player p) {
         Location center = p.getLocation().clone();
+        final Player finalP = p;
+        final World world = p.getWorld();
         
-        playSoundSafe(center, Sound.valueOf("ENTITY_WITHER_SPAWN"), 1.5f, 1.0f);
-        playSoundSafe(center, Sound.valueOf("BLOCK_END_PORTAL_SPAWN"), 1.0f, 0.9f);
-        p.sendTitle("§f§l🌕", "§6§lGOLDEN MOON DOMAIN", 10, 40, 10);
+        world.playSound(center, Sound.ENTITY_WITHER_SPAWN, 1.5f, 1.0f);
+        world.playSound(center, Sound.BLOCK_END_PORTAL_SPAWN, 1.0f, 0.9f);
+        finalP.sendTitle("§f§l🌕", "§6§lGOLDEN MOON DOMAIN", 10, 40, 10);
         
         // Phase 1: Moon Arena
         new BukkitRunnable() {
@@ -220,7 +231,7 @@ public class SkillListener implements Listener {
             @Override
             public void run() {
                 if (ticks >= 30) {
-                    triggerMoonSwordDrop(p, center);
+                    triggerMoonSwordDrop(finalP, center);
                     this.cancel();
                     return;
                 }
@@ -230,11 +241,12 @@ public class SkillListener implements Listener {
                     double angle = Math.toRadians(i * 60 + rotation);
                     Location corner = center.clone().add(Math.cos(angle) * 9, 0.3, Math.sin(angle) * 9);
                     spawnGoldenParticles(corner, 4);
-                    p.getWorld().spawnParticle(Particle.FLAME, corner, 2, 0.1, 0.1, 0.1, 0);
+                    world.spawnParticle(Particle.FLAME, corner, 2, 0.1, 0.1, 0.1, 0);
+                    world.spawnParticle(Particle.DUST, corner, 3, new Particle.DustOptions(Color.YELLOW, 1.8f));
                 }
                 
                 if(ticks % 3 == 0) {
-                    p.getWorld().spawnParticle(Particle.SMOKE, center.clone().add(0, 0.2, 0), 10, 2, 0.5, 2, 0.05);
+                    world.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, center.clone().add(0, 0.2, 0), 10, 2, 0.5, 2, 0.05);
                 }
                 ticks++;
             }
@@ -243,11 +255,14 @@ public class SkillListener implements Listener {
 
     // --- PHASE 2: GIANT MOON SWORD DROP ---
     private void triggerMoonSwordDrop(Player p, Location center) {
+        final Player finalP = p;
+        final World world = p.getWorld();
+        
         p.setVelocity(p.getLocation().getDirection().multiply(-2).setY(0.6));
         immunityFrame.add(p.getUniqueId());
         
-        // ArmorStand dengan Golden Sword (cross-platform)
-        ArmorStand moonBlade = (ArmorStand) center.getWorld().spawnEntity(
+        // ArmorStand dengan Golden Sword (1.21+ compatible)
+        ArmorStand moonBlade = (ArmorStand) world.spawnEntity(
             center.clone().add(0, 20, 0),
             EntityType.ARMOR_STAND
         );
@@ -262,13 +277,9 @@ public class SkillListener implements Listener {
         meta.setUnbreakable(true);
         sword.setItemMeta(meta);
         moonBlade.setItemInHand(sword);
-        
-        // Set arm pose (compatible)
-        try {
-            moonBlade.setRightArmPose(new org.bukkit.util.EulerAngle(
-                Math.toRadians(-100), Math.toRadians(180), Math.toRadians(0)
-            ));
-        } catch(Exception ignored) {}
+        moonBlade.setRightArmPose(new org.bukkit.util.EulerAngle(
+            Math.toRadians(-100), Math.toRadians(180), Math.toRadians(0)
+        ));
         
         new BukkitRunnable() {
             int frame = 0;
@@ -287,13 +298,13 @@ public class SkillListener implements Listener {
                 for(double h = 0; h < 4; h += 0.7) {
                     Location particleLoc = bladeLoc.clone().add(0, h, 0);
                     spawnGoldenParticles(particleLoc, 6);
-                    p.getWorld().spawnParticle(Particle.FLAME, particleLoc, 4, 0.15, 0.15, 0.15, 0);
-                    p.getWorld().spawnParticle(Particle.CRIT, particleLoc, 3, 0.1, 0.1, 0.1, 0);
-                    p.getWorld().spawnParticle(Particle.SMOKE, particleLoc, 2, 0.1, 0.1, 0.1, 0);
+                    world.spawnParticle(Particle.FLAME, particleLoc, 4, 0.15, 0.15, 0.15, 0);
+                    world.spawnParticle(Particle.CRIT, particleLoc, 3, 0.1, 0.1, 0.1, 0);
+                    world.spawnParticle(Particle.DUST, particleLoc, 5, new Particle.DustOptions(Color.YELLOW, 1.5f));
                 }
                 
                 if(frame % 4 == 0) {
-                    playSoundSafe(bladeLoc, Sound.valueOf("BLOCK_BELL_RESONATE"), 0.6f, 2.5f - (frame * 0.08f));
+                    world.playSound(bladeLoc, Sound.BLOCK_BELL_RESONATE, 0.6f, 2.5f - (frame * 0.08f));
                 }
                 
                 // IMPACT!
@@ -301,20 +312,17 @@ public class SkillListener implements Listener {
                     if (!moonBlade.isDead()) moonBlade.remove();
                     
                     // ===== IMPACT EFFECTS =====
-                    center.getWorld().spawnParticle(Particle.EXPLOSION, center, 10);
-                    center.getWorld().spawnParticle(Particle.FLAME, center, 40, 4, 1.5, 4, 0.1);
-                    center.getWorld().spawnParticle(Particle.SMOKE, center, 50, 5, 2, 5, 0.15);
-                    center.getWorld().spawnParticle(Particle.CRIT, center, 60, 5, 2, 5, 0.2);
+                    world.spawnParticle(Particle.EXPLOSION_EMITTER, center, 10);
+                    world.spawnParticle(Particle.FLAME, center, 40, 4, 1.5, 4, 0.1);
+                    world.spawnParticle(Particle.CLOUD, center, 50, 5, 2, 5, 0.15);
+                    world.spawnParticle(Particle.CRIT, center, 60, 5, 2, 5, 0.2);
+                    world.spawnParticle(Particle.DUST, center, 30, new Particle.DustOptions(Color.ORANGE, 2.5f));
                     
                     // Block crack (ground)
-                    try {
-                        center.getWorld().spawnParticle(
-                            Particle.valueOf("BLOCK_CRACK"), center, 120, 6, 0.5, 6, 0.1,
-                            Bukkit.createBlockData(Material.GOLD_BLOCK)
-                        );
-                    } catch(Exception ignored) {
-                        center.getWorld().spawnParticle(Particle.CLOUD, center, 80, 5, 1, 5, 0.1);
-                    }
+                    world.spawnParticle(
+                        Particle.BLOCK_CRACK, center, 120, 6, 0.5, 6, 0.1,
+                        Bukkit.createBlockData(Material.GOLD_BLOCK)
+                    );
                     
                     // Lightning
                     for(int flash = 0; flash < 4; flash++) {
@@ -322,26 +330,27 @@ public class SkillListener implements Listener {
                         new BukkitRunnable() {
                             @Override
                             public void run() {
-                                center.getWorld().strikeLightningEffect(center);
-                                playSoundSafe(center, Sound.valueOf("ENTITY_LIGHTNING_BOLT_THUNDER"), 2f, 0.6f);
+                                world.strikeLightningEffect(center);
+                                world.playSound(center, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 2f, 0.6f);
                             }
                         }.runTaskLater(plugin, fDelay);
                     }
                     
                     // Epic sounds
-                    playSoundSafe(center, Sound.valueOf("ENTITY_GENERIC_EXPLODE"), 2.5f, 0.8f);
-                    playSoundSafe(center, Sound.valueOf("BLOCK_ANVIL_LAND"), 2f, 0.4f);
-                    playSoundSafe(center, Sound.valueOf("ENTITY_WITHER_DEATH"), 1.5f, 0.9f);
+                    world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 2.5f, 0.8f);
+                    world.playSound(center, Sound.BLOCK_ANVIL_LAND, 2f, 0.4f);
+                    world.playSound(center, Sound.ENTITY_WITHER_DEATH, 1.5f, 0.9f);
                     
                     // AOE Damage
-                    center.getWorld().getNearbyEntities(center, 11.0, 11.0, 11.0).forEach(en -> {
-                        if (en instanceof LivingEntity le && !en.equals(p)) {
-                            le.damage(40.0, p);
+                    world.getNearbyEntities(center, 11.0, 11.0, 11.0).forEach(en -> {
+                        if (en instanceof LivingEntity le && !en.equals(finalP)) {
+                            le.damage(40.0, finalP);
                             le.setVelocity(new Vector(0, 1.8, 0));
                             le.setFireTicks(120);
                             le.getWorld().spawnParticle(Particle.CRIT, le.getLocation().add(0, 1, 0), 25, 0.4, 0.4, 0.4, 0.1);
                             le.getWorld().spawnParticle(Particle.FLAME, le.getLocation().add(0, 1, 0), 18, 0.3, 0.3, 0.3, 0.1);
-                            playSoundSafe(le.getLocation(), Sound.valueOf("ENTITY_GENERIC_HURT"), 1f, 1.3f);
+                            le.getWorld().spawnParticle(Particle.DUST, le.getLocation().add(0, 1, 0), 10, new Particle.DustOptions(Color.YELLOW, 1.8f));
+                            le.playSound(le.getLocation(), Sound.ENTITY_GENERIC_HURT, 1f, 1.3f);
                         }
                     });
                     
@@ -356,7 +365,7 @@ public class SkillListener implements Listener {
                         }
                     }.runTaskTimer(plugin, 0, 2);
                     
-                    immunityFrame.remove(p.getUniqueId());
+                    immunityFrame.remove(finalP.getUniqueId());
                     this.cancel();
                 }
                 frame++;
@@ -365,19 +374,10 @@ public class SkillListener implements Listener {
     }
 
     // ==========================================
-    // 🎨 HELPER: GOLDEN PARTICLES (Universal)
+    // 🎨 HELPER: GOLDEN PARTICLES
     // ==========================================
     private void spawnGoldenParticles(Location loc, int count) {
-        // DUST particle dengan fallback
-        try {
-            loc.getWorld().spawnParticle(
-                Particle.valueOf("REDSTONE"), loc, count, 
-                new Particle.DustOptions(Color.YELLOW, 1.5f)
-            );
-        } catch(Exception e) {
-            loc.getWorld().spawnParticle(Particle.FLAME, loc, count, 0.3, 0.3, 0.3, 0);
-        }
-        // Universal backup particles
+        loc.getWorld().spawnParticle(Particle.DUST, loc, count, new Particle.DustOptions(Color.YELLOW, 1.5f));
         loc.getWorld().spawnParticle(Particle.FLAME, loc, count / 2, 0.2, 0.2, 0.2, 0);
         loc.getWorld().spawnParticle(Particle.CRIT, loc, count / 3, 0.2, 0.2, 0.2, 0);
     }
@@ -395,25 +395,10 @@ public class SkillListener implements Listener {
     }
 
     // ==========================================
-    // 🔊 HELPER: playSound Safe (Old API)
-    // ==========================================
-    private void playSoundSafe(Location loc, Sound sound, float volume, float pitch) {
-        try {
-            loc.getWorld().playSound(loc, sound, volume, pitch);
-        } catch(Exception e) {
-            // Fallback untuk sound name yang tidak ada
-        }
-    }
-
-    // ==========================================
     // 📦 UTILS
     // ==========================================
     private void sendActionBar(Player p, String msg) {
-        try {
-            p.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(msg));
-        } catch(Exception e) {
-            p.sendMessage(msg); // Fallback chat
-        }
+        p.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(msg));
     }
 
     private boolean isHoldingSword(Player p) {
@@ -421,4 +406,4 @@ public class SkillListener implements Listener {
         return item != null && item.hasItemMeta() && 
                item.getItemMeta().getPersistentDataContainer().has(plugin.SWORD_KEY, PersistentDataType.BYTE);
     }
-                            }
+                    }
