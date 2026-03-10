@@ -1,6 +1,119 @@
-# Pengaturan Waktu Daily Reset (WIB)
-daily-reset-hour-wib: 6
+# 🌙 GoldenMoon Plugin - Config Ramadhan Edition
+# Edit file ini untuk mengubah reward, key, crate, dll.
 
+# --- Waktu & Visual ---
+daily-reset-hour-wib: 6
 moon-effect-start: 13000
 moon-effect-end: 22500
 
+# --- Currency ---
+fragment-name: "§b§lLunar Fragment §7✦"
+fragment-material: AMETHYST_SHARD
+fragment-lore:
+  - "§7Serpihan cahaya bulan suci."
+  - "§7Gunakan untuk membuka §eExcellent Crate§7."
+
+# --- Fragment to Key Trader ---
+trader:
+  gui-title: "§0§l✦ Lunar Fragment Trader §0§l✦"
+  fragment-cost: 10
+  key-output:
+    command: "excellence givekey %player% excellent 1"
+    message: "§e✦ §fTukar berhasil! §e1 Excellent Key §ftelah ditambahkan."
+
+# --- Admin Kit Config ---
+admin-kits:
+  crescent:
+    name: "§b§lCrescent Guardian Kit"
+    items:
+      helmet:
+        type: "helmet"
+        material: NETHERITE_HELMET
+        name: "§fCrescent Helm"
+        lore:
+          - "§7Bagian dari set Crescent Guardian."
+          - "§aSet Bonus: Night Vision + Golden Aura"
+      chestplate:
+        type: "chestplate"
+        material: NETHERITE_CHESTPLATE
+        name: "§fCrescent Chestplate"
+        lore:
+          - "§7Bagian dari set Crescent Guardian."
+          - "§aSet Bonus: +1 Absorption on combo finish"
+      leggings:
+        type: "leggings"
+        material: NETHERITE_LEGGINGS
+        name: "§fCrescent Leggings"
+        lore:
+          - "§7Bagian dari set Crescent Guardian."
+          - "§aSet Bonus: +Speed while gauge > 50%"
+      boots:
+        type: "boots"
+        material: NETHERITE_BOOTS
+        name: "§fCrescent Boots"
+        lore:
+          - "§7Bagian dari set Crescent Guardian."
+          - "§aSet Bonus: Moon Step (blink)"
+  
+  elite:
+    name: "§6§lGolden Moon Elite Kit"
+    items:
+      helmet:
+        type: "elite_helmet"
+        material: NETHERITE_HELMET
+        name: "§6§lGolden Moon Elite Helm"
+        lore:
+          - "§7Bagian dari set §6Golden Moon Elite§7."
+          - "§eSet Bonus: Evolved Ultimate + Stronger Blessing"
+          - "§c§lRARITY: LEGENDARY"
+      chestplate:
+        type: "elite_chestplate"
+        material: NETHERITE_CHESTPLATE
+        name: "§6§lGolden Moon Elite Chestplate"
+        lore:
+          - "§7Bagian dari set §6Golden Moon Elite§7."
+          - "§eSet Bonus: Evolved Ultimate + Stronger Blessing"
+          - "§c§lRARITY: LEGENDARY"
+      leggings:
+        type: "elite_leggings"
+        material: NETHERITE_LEGGINGS
+        name: "§6§lGolden Moon Elite Leggings"
+        lore:
+          - "§7Bagian dari set §6Golden Moon Elite§7."
+          - "§eSet Bonus: Evolved Ultimate + Stronger Blessing"
+          - "§c§lRARITY: LEGENDARY"
+      boots:
+        type: "elite_boots"
+        material: NETHERITE_BOOTS
+        name: "§6§lGolden Moon Elite Boots"
+        lore:
+          - "§7Bagian dari set §6Golden Moon Elite§7."
+          - "§eSet Bonus: Evolved Ultimate + Stronger Blessing"
+          - "§c§lRARITY: LEGENDARY"
+
+# --- Daily Rewards ---
+daily-rewards:
+  fragment-days:
+    21: 5
+    22: 5
+    23: 8
+    24: 8
+    25: 10
+    26: 10
+    27: 12
+    28: 12
+    29: 15
+  day-30:
+    enabled: true
+    broadcast: true
+    message: "§6§l[DAILY] §e%player% §ftelah mengklaim §b§lLunar Crescent Blade§f!"
+
+# --- Messages ---
+messages:
+  welcome-message: "&6✦ &fSelamat datang di &eGoldenMoon Ramadhan&f! &7Gunakan &b/gm daily &7untuk klaim hadiah."
+  quest-success: "&a✦ &fTakjil berhasil diberikan! &e+5 Gold Nugget"
+  receive-takjil: "&e✦ &f%player% &memberimu takjil! &a+1 Heart"
+  no-permission: "&c✦ &fIzin ditolak! Khusus Admin."
+  claim-success: "&a✦ &fHadiah hari ke-&e%day% &fberhasil diklaim!"
+  already-claimed: "&c✦ &fKamu sudah mengambil hadiah hari ini!"
+  fragment-earned: "&b✦ &f+&b%amount% Lunar Fragment"
