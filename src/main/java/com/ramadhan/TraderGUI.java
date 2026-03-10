@@ -23,12 +23,13 @@ public class TraderGUI implements Listener, InventoryHolder {
     
     public TraderGUI(GoldenMoon plugin) {
         this.plugin = plugin;
-        this.inv = Bukkit.createInventory(this, 45, 
-            plugin.getConfig().getString("trader.gui-title", "§0§l✦ Lunar Fragment Trader §0§l✦"));
+        this.inv = Bukkit.createInventory(this, 45, "§0§l✦ Lunar Fragment Trader");
     }
     
     @Override
-    public Inventory getInventory() { return inv; }
+    public Inventory getInventory() { 
+        return inv; 
+    }
     
     public void open(Player p) {
         prepareGui(p);
@@ -39,10 +40,14 @@ public class TraderGUI implements Listener, InventoryHolder {
         inv.clear();
         ItemStack bg = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
         ItemMeta bgMeta = bg.getItemMeta();
-        if(bgMeta != null) { bgMeta.setDisplayName(" "); bg.setItemMeta(bgMeta); }
-        for(int i = 0; i < 45; i++) {
-            if(i != FRAGMENT_SLOT && i != EXCHANGE_SLOT) inv.setItem(i, bg);
+        if(bgMeta != null) { 
+            bgMeta.setDisplayName(" "); 
+            bg.setItemMeta(bgMeta); 
         }
+        for(int i = 0; i < 45; i++) {
+            if(i != FRAGMENT_SLOT && i != EXCHANGE_SLOT) {
+                inv.setItem(i, bg);
+            }        }
         
         int fragmentCount = countFragments(p);
         ItemStack fragmentDisplay = plugin.getDailyManager().createFragment(fragmentCount);
@@ -50,10 +55,14 @@ public class TraderGUI implements Listener, InventoryHolder {
         if(fdMeta != null) {
             fdMeta.setDisplayName("§b§lLunar Fragment §7✦");
             fdMeta.setLore(Arrays.asList(
-                "", "§fJumlah dimiliki: §e" + fragmentCount, "",
+                "", 
+                "§fJumlah: §e" + fragmentCount, 
+                "",
                 "§7Tukar §e" + plugin.getConfig().getInt("trader.fragment-cost", 10) + " §7fragment",
-                "§7untuk §e1 Excellent Key§7!", "",
-                "§e§l[!] §fKey akan dikirim via command Excellence Crate"
+                "§7untuk §e1 Excellent Key",
+                "",
+                fragmentCount >= plugin.getConfig().getInt("trader.fragment-cost", 10) ? 
+                    "§a§l[✓] Cukup!" : "§c§l[✗] Kurang!"
             ));
             fragmentDisplay.setItemMeta(fdMeta);
         }
@@ -62,11 +71,16 @@ public class TraderGUI implements Listener, InventoryHolder {
         ItemStack exchangeBtn = new ItemStack(Material.EMERALD);
         ItemMeta ebMeta = exchangeBtn.getItemMeta();
         if(ebMeta != null) {
-            ebMeta.setDisplayName("§a§l✦ TUKAR SEKARANG §a§l✦");
+            ebMeta.setDisplayName("§a§l✦ TUKAR SEKARANG");
             int cost = plugin.getConfig().getInt("trader.fragment-cost", 10);
             ebMeta.setLore(Arrays.asList(
-                "", "§fKlik untuk menukar:", "§e- §b" + cost + " Lunar Fragment", "§e+ §f1 Excellent Key", "",
-                fragmentCount >= cost ? "§a§l[✓] Cukup fragment!" : "§c§l[✗] Fragment kurang!", ""
+                "", 
+                "§fKlik untuk menukar:", 
+                "§e- §b" + cost + " Lunar Fragment", 
+                "§e+ §f1 Excellent Key", 
+                "",
+                fragmentCount >= cost ? "§a§l[✓] Cukup!" : "§c§l[✗] Fragment kurang!", 
+                ""
             ));
             exchangeBtn.setItemMeta(ebMeta);
         }
@@ -76,14 +90,16 @@ public class TraderGUI implements Listener, InventoryHolder {
     private int countFragments(Player p) {
         int count = 0;
         for(ItemStack item : p.getInventory().getContents()) {
-            if(isFragment(item)) count += item.getAmount();
+            if(isFragment(item)) {
+                count += item.getAmount();
+            }
         }
         return count;
     }
-    
-    private boolean isFragment(ItemStack item) {
+        private boolean isFragment(ItemStack item) {
         return item != null && item.hasItemMeta() &&
-               item.getItemMeta().getPersistentDataContainer().has(GoldenMoon.FRAGMENT_KEY, PersistentDataType.BYTE);
+               item.getItemMeta().getPersistentDataContainer()
+                   .has(GoldenMoon.FRAGMENT_KEY, PersistentDataType.BYTE);
     }
     
     @EventHandler
@@ -107,20 +123,29 @@ public class TraderGUI implements Listener, InventoryHolder {
     private void executeExchange(Player p) {
         int cost = plugin.getConfig().getInt("trader.fragment-cost", 10);
         int owned = countFragments(p);
+        
         if(owned < cost) {
-            p.sendMessage("§c✦ §fFragment tidak cukup! Butuh §e" + cost + "§f, punya §e" + owned);
+            p.sendMessage("§c✦ §fFragment tidak cukup! Butuh §e" + cost);
             p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             prepareGui(p);
             return;
         }
+        
         removeFragments(p, cost);
+        
+        // Execute Excellence Crate command
         String keyCommand = plugin.getConfig().getString("trader.key-output.command", "excellence givekey %player% excellent 1");
         String finalCommand = keyCommand.replace("%player%", p.getName());
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand);
-        String successMsg = plugin.getConfig().getString("trader.key-output.message", "§e✦ §fTukar berhasil! §e1 Excellent Key §ftelah ditambahkan.");
-        p.sendMessage(successMsg);
-        p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.2f);
-        prepareGui(p);
+        
+        try {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand);
+            p.sendMessage("§e✦ §fTukar berhasil! §e1 Excellent Key §fditambahkan.");
+            p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.2f);
+        } catch(Exception ex) {
+            p.sendMessage("§c✦ §fError: Command excellence tidak tersedia!");
+            p.sendMessage("§7Pastikan plugin Excellence Crate terinstall.");
+        }
+                prepareGui(p);
         Bukkit.getScheduler().runTaskLater(plugin, () -> p.closeInventory(), 10);
     }
     
@@ -141,4 +166,4 @@ public class TraderGUI implements Listener, InventoryHolder {
             }
         }
     }
-                      }
+}
