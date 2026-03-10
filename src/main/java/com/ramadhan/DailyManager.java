@@ -134,6 +134,64 @@ public class DailyManager {
         if (m != null) {
             m.setDisplayName("§f§lLunar §e§lCrescent Blade");
             m.setLore(Arrays.asList(
+                "§7A sacred weapon blessed by the moon.",
+                "",
+                "§e§l⚔ COMBO SYSTEM:",
+                "§f  • §6Hit 1 - Basic Strike §7(2.5 dmg + knockback)",
+                "§f  • §bHit 2 - Moonfall Strike §7(4 dmg + launch + slow)",
+                "§f  • §eHit 3 - Starfall Dance §7(dash + AoE slash)",
+                "",
+                "§e§l🛡 SHIELD SYNERGY:",
+                "§f  • §6Perfect Parry §7(block on hit = reflect + counter)",
+                "§f  • §bShield Bash §7(stun enemies while blocking)",
+                "",
+                "§e§l🌕 ULTIMATE - Lunar Eclipse:",
+                "§f  • Charge Lunar Gauge to §e100%",
+                "§f  • Hold §eRight-Click §7to charge",
+                "§f  • Release for §bGolden Moon Blessing",
+                "§f  • Heals allies + damages enemies",
+                "",
+                "§7§o✦ Unbreakable • Won't drop on death",
+                "§7§o✦ Requires Lunar Armor for full potential"
+            ));
+            m.setUnbreakable(true);
+            m.getPersistentDataContainer().set(GoldenMoon.SWORD_KEY, PersistentDataType.BYTE, (byte)1);
+            s.setItemMeta(m);
+        }
+        return s;
+    }
+}    }
+
+    private void addItem(Player p, Material mat, int qty, String name) {
+        p.getInventory().addItem(new ItemStack(mat, qty));
+        p.sendMessage("§e§l+ §f" + name);
+    }
+
+    public void giveFragment(Player p, int amount) {
+        ItemStack fragment = createFragment(amount);
+        p.getInventory().addItem(fragment);
+        p.sendMessage(plugin.getMsg("fragment-earned").replace("%amount%", String.valueOf(amount)));
+    }
+
+    public ItemStack createFragment(int amount) {
+        Material mat = Material.valueOf(plugin.getConfig().getString("fragment-material", "AMETHYST_SHARD"));
+        ItemStack item = new ItemStack(mat, amount);
+        ItemMeta meta = item.getItemMeta();
+        if(meta != null) {
+            meta.setDisplayName(plugin.getFragmentName());
+            meta.setLore(plugin.getConfig().getStringList("fragment-lore"));
+            meta.getPersistentDataContainer().set(GoldenMoon.FRAGMENT_KEY, PersistentDataType.BYTE, (byte)1);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    public ItemStack getSpecialBlade() {
+        ItemStack s = new ItemStack(Material.NETHERITE_SWORD);
+        ItemMeta m = s.getItemMeta();
+        if (m != null) {
+            m.setDisplayName("§f§lLunar §e§lCrescent Blade");
+            m.setLore(Arrays.asList(
                 "§7Senjata suci titisan rembulan.",
                 "",
                 "§e§lSPECIAL ABILITY:",
