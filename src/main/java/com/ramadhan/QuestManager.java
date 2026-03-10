@@ -9,7 +9,9 @@ import org.bukkit.inventory.ItemStack;
 
 public class QuestManager implements Listener {
     private final GoldenMoon plugin;
+    
     public QuestManager(GoldenMoon plugin) { this.plugin = plugin; }
+    
     @EventHandler
     public void onGiveTakjil(PlayerInteractEntityEvent event) {
         if (!(event.getRightClicked() instanceof Player)) return;
@@ -24,4 +26,3 @@ public class QuestManager implements Listener {
         }
     }
 }
-
