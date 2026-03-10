@@ -1,13 +1,24 @@
-name: GoldenRamadhan
-version: 1.0
+name: GoldenMoon
+version: '${project.version}'
 main: com.ramadhan.GoldenMoon
 api-version: '1.21'
+authors: [Ramadhan]
+description: Golden Moon Ramadhan Event Plugin - RPG Combat + Daily + Gacha Integration
+website: https://ramadhan.com
+
 commands:
   goldenmoon:
     aliases: [gm]
-    description: Menu Daily dan Command Admin.
+    description: Main command for GoldenMoon plugin
+    usage: /gm <daily|trader|getsword|getkit|givefragment>
+    permission: goldenmoon.use
 
 permissions:
+  goldenmoon.use:
+    description: Allow using basic commands
+    default: true
   goldenmoon.admin:
-    description: Izin khusus untuk mengambil pedang via command.
+    description: Admin commands (getsword, getkit, givefragment, etc)
     default: op
+    children:
+      goldenmoon.use: true
