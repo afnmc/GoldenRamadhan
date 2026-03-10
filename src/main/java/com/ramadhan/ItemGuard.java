@@ -8,19 +8,22 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
+
 import java.util.*;
 
 public class ItemGuard implements Listener {
+    private final GoldenMoon plugin;
     private final Map<UUID, List<ItemStack>> savedItems = new HashMap<>();
 
-    // DURABILITY: Tetap abadi
+    public ItemGuard(GoldenMoon plugin) { this.plugin = plugin; }
+
     @EventHandler
     public void onDurability(PlayerItemDamageEvent e) {
         if (isSpecial(e.getItem())) e.setCancelled(true);
     }
 
-    // KEEP ON DEATH: Gak bakal drop pas mati
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onDeath(PlayerDeathEvent e) {
         Player p = e.getEntity();
@@ -48,7 +51,18 @@ public class ItemGuard implements Listener {
     }
 
     private boolean isSpecial(ItemStack item) {
-        return item != null && item.hasItemMeta() && 
-               item.getItemMeta().getPersistentDataContainer().has(GoldenMoon.SWORD_KEY, PersistentDataType.BYTE);
+        if (item == null || !item.hasItemMeta()) return false;
+        ItemMeta meta = item.getItemMeta();
+        return meta.getPersistentDataContainer().has(GoldenMoon.SWORD_KEY, PersistentDataType.BYTE) ||
+               meta.getPersistentDataContainer().has(GoldenMoon.SHIELD_KEY, PersistentDataType.BYTE) ||
+               meta.getPersistentDataContainer().has(GoldenMoon.FRAGMENT_KEY, PersistentDataType.BYTE) ||
+               meta.getPersistentDataContainer().has(GoldenMoon.ARMOR_HELMET_KEY, PersistentDataType.BYTE) ||
+               meta.getPersistentDataContainer().has(GoldenMoon.ARMOR_CHEST_KEY, PersistentDataType.BYTE) ||
+               meta.getPersistentDataContainer().has(GoldenMoon.ARMOR_LEGS_KEY, PersistentDataType.BYTE) ||
+               meta.getPersistentDataContainer().has(GoldenMoon.ARMOR_BOOTS_KEY, PersistentDataType.BYTE) ||
+               meta.getPersistentDataContainer().has(GoldenMoon.ELITE_HELMET_KEY, PersistentDataType.BYTE) ||
+               meta.getPersistentDataContainer().has(GoldenMoon.ELITE_CHEST_KEY, PersistentDataType.BYTE) ||
+               meta.getPersistentDataContainer().has(GoldenMoon.ELITE_LEGS_KEY, PersistentDataType.BYTE) ||
+               meta.getPersistentDataContainer().has(GoldenMoon.ELITE_BOOTS_KEY, PersistentDataType.BYTE);
     }
 }
