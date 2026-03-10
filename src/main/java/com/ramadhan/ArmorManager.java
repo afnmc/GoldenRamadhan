@@ -5,7 +5,6 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.event.*;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.player.PlayerItemEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -13,6 +12,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 
 import java.util.*;
 
@@ -63,7 +63,7 @@ public class ArmorManager implements Listener {
     }
     
     @EventHandler
-    public void onArmorChange(PlayerItemEvent e) {
+    public void onArmorChange(org.bukkit.event.player.PlayerItemChangeEvent e) {
         if(e.getEntity() instanceof Player p) {
             new BukkitRunnable() {
                 @Override
@@ -77,35 +77,38 @@ public class ArmorManager implements Listener {
     private void updateArmorBonus(Player p) {
         ArmorSetData data = playerArmorData.computeIfAbsent(p.getUniqueId(), k -> new ArmorSetData());
         
-        p.removePotionEffect(PotionEffectType.NIGHT_VISION);
-        p.removePotionEffect(PotionEffectType.SPEED);
+        // Remove old effects safely
+        try { p.removePotionEffect(PotionEffectType.NIGHT_VISION); } catch(Exception ignored) {}
+        try { p.removePotionEffect(PotionEffectType.SPEED); } catch(Exception ignored) {}
         
         if(hasCrescentSet(p) && !hasFullEliteSet(p)) {
             data.setBonusActive = true;
             data.isElite = false;
-            p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, Integer.MAX_VALUE, 0, false, false));
+            try {
+                p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, Integer.MAX_VALUE, 0, false, false));
+            } catch(Exception ignored) {}
             if(!data.auraTask) {
                 data.auraTask = true;
-                startAuraEffect(p, Color.fromRGB(255, 215, 0), 1.0);
+                startAuraEffect(p, Color.fromRGB(255, 215, 0), 1.0f);
             }
         } else if(hasFullEliteSet(p)) {
             data.setBonusActive = true;
             data.isElite = true;
-            p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, Integer.MAX_VALUE, 1, false, false));
-            p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 0, false, false));
+            try {
+                p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, Integer.MAX_VALUE, 1, false, false));
+                p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 0, false, false));
+            } catch(Exception ignored) {}
             if(!data.auraTask) {
                 data.auraTask = true;
-                startAuraEffect(p, Color.fromRGB(200, 200, 220), 1.3);
+                startAuraEffect(p, Color.fromRGB(200, 200, 220), 1.3f);
             }
         } else {
             data.setBonusActive = false;
-            if(data.auraTask) {
-                data.auraTask = false;
-            }
+            if(data.auraTask) data.auraTask = false;
         }
     }
     
-    private void startAuraEffect(Player p, Color color, double size) {
+    private void startAuraEffect(Player p, Color color, float size) {
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -140,7 +143,7 @@ public class ArmorManager implements Listener {
         } else if(new Random().nextInt(100) < 10) {
             e.setCancelled(true);
             p.getWorld().spawnParticle(Particle.FLASH, p.getLocation().add(0, 1, 0), 1);
-            p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.5f, 2.0f);
+            p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_HIT, 0.5f, 2.0f);
         }
     }
     
@@ -151,7 +154,7 @@ public class ArmorManager implements Listener {
         if(!data.moonStepReady) return false;
         
         Vector dir = p.getLocation().getDirection().setY(0).normalize();
-        Location target = p.getLocation().add(dir.multiply(4));
+        Location target = p.getLocation().add(dir.clone().multiply(4));
         
         for(double i = 0; i < 4; i += 0.4) {
             Location trail = p.getLocation().add(dir.clone().multiply(i).setY(0.1));
@@ -185,9 +188,7 @@ public class ArmorManager implements Listener {
             org.bukkit.configuration.ConfigurationSection itemConfig = kitConfig.getConfigurationSection(itemKey);
             if(itemConfig == null) continue;
             ItemStack item = createKitItem(itemConfig);
-            if(item != null) {
-                p.getInventory().addItem(item);
-            }
+            if(item != null) p.getInventory().addItem(item);
         }
         
         ItemStack shield = createLunarAegis();
@@ -206,17 +207,17 @@ public class ArmorManager implements Listener {
                 meta.setDisplayName(config.getString("name", "Custom Armor"));
                 meta.setLore(config.getStringList("lore"));
                 meta.setUnbreakable(true);
-                NamespacedKey key = switch(type) {
-                    case "helmet" -> GoldenMoon.ARMOR_HELMET_KEY;
-                    case "chestplate" -> GoldenMoon.ARMOR_CHEST_KEY;
-                    case "leggings" -> GoldenMoon.ARMOR_LEGS_KEY;
-                    case "boots" -> GoldenMoon.ARMOR_BOOTS_KEY;
-                    case "elite_helmet" -> GoldenMoon.ELITE_HELMET_KEY;
-                    case "elite_chestplate" -> GoldenMoon.ELITE_CHEST_KEY;
-                    case "elite_leggings" -> GoldenMoon.ELITE_LEGS_KEY;
-                    case "elite_boots" -> GoldenMoon.ELITE_BOOTS_KEY;
-                    default -> null;
-                };
+                NamespacedKey key = null;
+                switch(type) {
+                    case "helmet": key = GoldenMoon.ARMOR_HELMET_KEY; break;
+                    case "chestplate": key = GoldenMoon.ARMOR_CHEST_KEY; break;
+                    case "leggings": key = GoldenMoon.ARMOR_LEGS_KEY; break;
+                    case "boots": key = GoldenMoon.ARMOR_BOOTS_KEY; break;
+                    case "elite_helmet": key = GoldenMoon.ELITE_HELMET_KEY; break;
+                    case "elite_chestplate": key = GoldenMoon.ELITE_CHEST_KEY; break;
+                    case "elite_leggings": key = GoldenMoon.ELITE_LEGS_KEY; break;
+                    case "elite_boots": key = GoldenMoon.ELITE_BOOTS_KEY; break;
+                }
                 if(key != null) {
                     meta.getPersistentDataContainer().set(key, PersistentDataType.BYTE, (byte)1);
                 }
@@ -261,4 +262,4 @@ public class ArmorManager implements Listener {
         boolean auraTask = false;
         boolean moonStepReady = true;
     }
-    }
+                                 }
