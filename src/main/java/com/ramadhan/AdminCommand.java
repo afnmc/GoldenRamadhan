@@ -1,41 +1,69 @@
 package com.ramadhan;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 public class AdminCommand implements CommandExecutor {
     private final GoldenMoon plugin;
 
-    public AdminCommand(GoldenMoon plugin) {
-        this.plugin = plugin;
-    }
+    public AdminCommand(GoldenMoon plugin) { this.plugin = plugin; }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) return true;
-
-        if (args.length > 0) {
-            // Jalur Member: /gm daily
-            if (args[0].equalsIgnoreCase("daily")) {
-                plugin.getDailyManager().openDailyMenu(player);
-                return true;
-            }
-
-            // Jalur Admin: /gm getsword
-            if (args[0].equalsIgnoreCase("getsword")) {
-                if (!player.hasPermission("goldenmoon.admin")) {
-                    player.sendMessage("§c§l[!] §cIzin ditolak! Khusus Admin.");
-                    return true;
-                }
-                player.getInventory().addItem(plugin.getDailyManager().getSpecialBlade());
-                player.sendMessage("§f§l[!] §ePedang Lunar ditambahkan ke inventory!");
-                return true;
-            }
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("§c✦ §fCommand ini hanya untuk player!");
+            return true;
         }
 
-        player.sendMessage("§eGunakan: §f/gm daily §eatau §f/gm getsword");
+        if (!player.hasPermission("goldenmoon.admin")) {
+            player.sendMessage(plugin.getMsg("no-permission"));
+            return true;
+        }
+
+        if (args.length == 0) {
+            player.sendMessage("§e=== §6GoldenMoon Admin §e===");
+            player.sendMessage("§f/gm daily §7- Buka menu daily");
+            player.sendMessage("§f/gm trader §7- Buka fragment trader");
+            player.sendMessage("§f/gm getsword §7- Dapatkan Lunar Crescent Blade");
+            player.sendMessage("§f/gm getkit <crescent|elite> §7- Dapatkan full armor kit");
+            player.sendMessage("§f/gm givefragment <player> <amount> §7- Beri fragment");
+            return true;
+        }
+
+        switch (args[0].toLowerCase()) {
+            case "daily" -> plugin.getDailyManager().openDailyMenu(player);
+            case "trader" -> new TraderGUI(plugin).open(player);
+            case "getsword" -> {
+                ItemStack sword = plugin.getDailyManager().getSpecialBlade();
+                player.getInventory().addItem(sword);
+                player.sendMessage("§a✦ §fLunar Crescent Blade ditambahkan!");
+                player.playSound(player.getLocation(), org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
+            }
+            case "getkit" -> {
+                if (args.length < 2) { player.sendMessage("§eGunakan: §f/gm getkit <crescent|elite>"); return true; }
+                String kitType = args[1].toLowerCase();
+                if (plugin.getArmorManager().giveKit(player, kitType)) {
+                    player.sendMessage("§a✦ §fKit §e" + kitType + " §fditambahkan!");
+                    player.playSound(player.getLocation(), org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
+                } else {
+                    player.sendMessage("§c✦ §fTipe kit tidak valid! Gunakan: crescent atau elite");
+                }
+            }
+            case "givefragment" -> {
+                if (args.length < 3) { player.sendMessage("§eGunakan: §f/gm givefragment <player> <amount>"); return true; }
+                Player target = Bukkit.getPlayer(args[1]);
+                if (target == null) { player.sendMessage("§c✦ §fPlayer tidak online!"); return true; }
+                int amount;
+                try { amount = Integer.parseInt(args[2]); } catch (NumberFormatException e) { player.sendMessage("§c✦ §fAmount harus angka!"); return true; }
+                plugin.getDailyManager().giveFragment(target, amount);
+                player.sendMessage("§a✦ §fBerikan §b" + amount + " Lunar Fragment §fke §e" + target.getName());
+            }
+            default -> player.sendMessage("§c✦ §fCommand tidak dikenal! Gunakan /gm untuk help.");
+        }
         return true;
     }
 }
