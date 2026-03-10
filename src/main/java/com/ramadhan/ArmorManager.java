@@ -12,7 +12,6 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
 
 import java.util.*;
 
@@ -48,8 +47,7 @@ public class ArmorManager implements Listener {
                hasPiece(p, GoldenMoon.ELITE_LEGS_KEY) &&
                hasPiece(p, GoldenMoon.ELITE_BOOTS_KEY);
     }
-    
-    public boolean hasCrescentChestplate(Player p) {
+        public boolean hasCrescentChestplate(Player p) {
         return hasPiece(p, GoldenMoon.ARMOR_CHEST_KEY);
     }
     
@@ -61,8 +59,6 @@ public class ArmorManager implements Listener {
     public void onJoin(PlayerJoinEvent e) {
         updateArmorBonus(e.getPlayer());
     }
-    
-    // ✅ FIX: Hapus onArmorChange karena PlayerItemChangeEvent tidak ada di Bukkit
     
     private void updateArmorBonus(Player p) {
         ArmorSetData data = playerArmorData.computeIfAbsent(p.getUniqueId(), k -> new ArmorSetData());
@@ -76,10 +72,6 @@ public class ArmorManager implements Listener {
             try {
                 p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, Integer.MAX_VALUE, 0, false, false));
             } catch(Exception ignored) {}
-            if(!data.auraTask) {
-                data.auraTask = true;
-                startAuraEffect(p, Color.fromRGB(255, 215, 0), 1.0f);
-            }
         } else if(hasFullEliteSet(p)) {
             data.setBonusActive = true;
             data.isElite = true;
@@ -87,38 +79,9 @@ public class ArmorManager implements Listener {
                 p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, Integer.MAX_VALUE, 1, false, false));
                 p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 0, false, false));
             } catch(Exception ignored) {}
-            if(!data.auraTask) {
-                data.auraTask = true;
-                startAuraEffect(p, Color.fromRGB(200, 200, 220), 1.3f);
-            }
         } else {
             data.setBonusActive = false;
-            if(data.auraTask) data.auraTask = false;
         }
-    }
-    
-    private void startAuraEffect(Player p, Color color, float size) {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                ArmorSetData data = playerArmorData.get(p.getUniqueId());
-                if(data == null || !data.setBonusActive || !p.isOnline()) {
-                    this.cancel();
-                    return;
-                }
-                double pulse = Math.sin(System.currentTimeMillis() / 200.0) * 0.3;
-                for(double angle = 0; angle < 360; angle += 30) {
-                    double rad = Math.toRadians(angle);
-                    Location auraLoc = p.getLocation().add(
-                        Math.cos(rad) * (1.2 + pulse),
-                        0.5 + Math.random() * 1.5,
-                        Math.sin(rad) * (1.2 + pulse)
-                    );
-                    p.getWorld().spawnParticle(Particle.DUST, auraLoc, 1,
-                        new Particle.DustOptions(color, size));
-                }
-            }
-        }.runTaskTimer(plugin, 0, 4);
     }
     
     @EventHandler
@@ -132,26 +95,16 @@ public class ArmorManager implements Listener {
         } else if(new Random().nextInt(100) < 10) {
             e.setCancelled(true);
             p.getWorld().spawnParticle(Particle.FLASH, p.getLocation().add(0, 1, 0), 1);
-            p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_HIT, 0.5f, 2.0f);
         }
-    }
-    
+    }    
     public boolean tryMoonStep(Player p) {
         ArmorSetData data = playerArmorData.get(p.getUniqueId());
         if(data == null || !data.setBonusActive || data.isElite) return false;
         if(!hasPiece(p, GoldenMoon.ARMOR_BOOTS_KEY)) return false;
         if(!data.moonStepReady) return false;
         
-        Vector dir = p.getLocation().getDirection().setY(0).normalize();
-        Location target = p.getLocation().add(dir.clone().multiply(4));
-        
-        for(double i = 0; i < 4; i += 0.4) {
-            Location trail = p.getLocation().add(dir.clone().multiply(i).setY(0.1));
-            p.getWorld().spawnParticle(Particle.DUST, trail, 2,
-                new Particle.DustOptions(Color.fromRGB(255, 223, 100), 1.5f));
-        }
-        p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 0.4f, 1.8f);
-        p.teleport(target);
+        org.bukkit.util.Vector dir = p.getLocation().getDirection().setY(0).normalize();
+        p.teleport(p.getLocation().add(dir.clone().multiply(3)));
         
         data.moonStepReady = false;
         new BukkitRunnable() {
@@ -164,6 +117,7 @@ public class ArmorManager implements Listener {
         return true;
     }
     
+    // ✅ FIX: GIVE KIT LENGKAP (HELMET, CHEST, LEGS, BOOTS, SHIELD)
     public boolean giveKit(Player p, String kitType) {
         org.bukkit.configuration.ConfigurationSection kitConfig = 
             plugin.getConfig().getConfigurationSection("admin-kits." + kitType);
@@ -172,16 +126,44 @@ public class ArmorManager implements Listener {
         String kitName = kitConfig.getString("name", "Unknown Kit");
         p.sendMessage("§6✦ §fMenerima: " + kitName);
         
-        for(String itemKey : kitConfig.getKeys(false)) {
-            if(itemKey.equalsIgnoreCase("name")) continue;
-            org.bukkit.configuration.ConfigurationSection itemConfig = kitConfig.getConfigurationSection(itemKey);
+        // ✅ Loop semua item di kit
+        org.bukkit.configuration.ConfigurationSection itemsSection = kitConfig.getConfigurationSection("items");
+        if(itemsSection == null) return false;
+        
+        for(String itemKey : itemsSection.getKeys(false)) {
+            org.bukkit.configuration.ConfigurationSection itemConfig = itemsSection.getConfigurationSection(itemKey);
             if(itemConfig == null) continue;
+            
             ItemStack item = createKitItem(itemConfig);
-            if(item != null) p.getInventory().addItem(item);
+            if(item != null) {
+                String type = itemConfig.getString("type", "").toLowerCase();
+                
+                // ✅ Equip di slot yang benar
+                switch(type) {
+                    case "helmet" -> {
+                        p.getInventory().setHelmet(item);
+                        p.sendMessage("§a  + §f" + item.getItemMeta().getDisplayName());
+                    }
+                    case "chestplate" -> {
+                        p.getInventory().setChestplate(item);                        p.sendMessage("§a  + §f" + item.getItemMeta().getDisplayName());
+                    }
+                    case "leggings" -> {
+                        p.getInventory().setLeggings(item);
+                        p.sendMessage("§a  + §f" + item.getItemMeta().getDisplayName());
+                    }
+                    case "boots" -> {
+                        p.getInventory().setBoots(item);
+                        p.sendMessage("§a  + §f" + item.getItemMeta().getDisplayName());
+                    }
+                }
+            }
         }
         
+        // ✅ Give shield di offhand
         ItemStack shield = createLunarAegis();
         p.getInventory().setItemInOffHand(shield);
+        p.sendMessage("§a  + §f" + shield.getItemMeta().getDisplayName());
+        
         updateArmorBonus(p);
         return true;
     }
@@ -196,22 +178,23 @@ public class ArmorManager implements Listener {
                 meta.setDisplayName(config.getString("name", "Custom Armor"));
                 meta.setLore(config.getStringList("lore"));
                 meta.setUnbreakable(true);
+                
                 NamespacedKey key = null;
-                switch(type) {
-                    case "helmet": key = GoldenMoon.ARMOR_HELMET_KEY; break;
-                    case "chestplate": key = GoldenMoon.ARMOR_CHEST_KEY; break;
-                    case "leggings": key = GoldenMoon.ARMOR_LEGS_KEY; break;
-                    case "boots": key = GoldenMoon.ARMOR_BOOTS_KEY; break;
-                    case "elite_helmet": key = GoldenMoon.ELITE_HELMET_KEY; break;
-                    case "elite_chestplate": key = GoldenMoon.ELITE_CHEST_KEY; break;
-                    case "elite_leggings": key = GoldenMoon.ELITE_LEGS_KEY; break;
-                    case "elite_boots": key = GoldenMoon.ELITE_BOOTS_KEY; break;
+                switch(type.toLowerCase()) {
+                    case "helmet" -> key = GoldenMoon.ARMOR_HELMET_KEY;
+                    case "chestplate" -> key = GoldenMoon.ARMOR_CHEST_KEY;
+                    case "leggings" -> key = GoldenMoon.ARMOR_LEGS_KEY;
+                    case "boots" -> key = GoldenMoon.ARMOR_BOOTS_KEY;
+                    case "elite_helmet" -> key = GoldenMoon.ELITE_HELMET_KEY;
+                    case "elite_chestplate" -> key = GoldenMoon.ELITE_CHEST_KEY;
+                    case "elite_leggings" -> key = GoldenMoon.ELITE_LEGS_KEY;
+                    case "elite_boots" -> key = GoldenMoon.ELITE_BOOTS_KEY;
                 }
+                
                 if(key != null) {
                     meta.getPersistentDataContainer().set(key, PersistentDataType.BYTE, (byte)1);
                 }
-                item.setItemMeta(meta);
-            }
+                item.setItemMeta(meta);            }
             return item;
         } catch(Exception e) {
             plugin.getLogger().warning("Failed to create kit item: " + e.getMessage());
@@ -225,14 +208,13 @@ public class ArmorManager implements Listener {
         if(meta != null) {
             meta.setDisplayName("§b§lLunar §fAegis");
             meta.setLore(Arrays.asList(
-                "§7Shield suci dengan parry mechanic.",
+                "§7Shield dengan parry mechanic",
                 "",
                 "§e§lABILITY:",
-                "§f- §6Block: §7Tahan kanan untuk mengurangi 80% damage",
-                "§f- §bPerfect Parry: §7Release saat hit = reflect + counter",
-                "§f- §aShield Bash: §7Klik kiri saat block = stun + knockback",
+                "§f- §6Block: §780% damage reduction",
+                "§f- §bPerfect Parry: §7Reflect damage",
                 "",
-                "§8§oItem tidak akan drop & bebas di-rename"
+                "§8§oUnbreakable"
             ));
             meta.setUnbreakable(true);
             meta.getPersistentDataContainer().set(GoldenMoon.SHIELD_KEY, PersistentDataType.BYTE, (byte)1);
@@ -248,7 +230,6 @@ public class ArmorManager implements Listener {
     public static class ArmorSetData {
         boolean setBonusActive = false;
         boolean isElite = false;
-        boolean auraTask = false;
         boolean moonStepReady = true;
     }
-                                                }
+            }
