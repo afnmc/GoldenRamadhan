@@ -9,6 +9,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent; // ✅ ADDED: Missing import!
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.metadata.FixedMetadataValue;
@@ -20,7 +21,7 @@ import java.util.*;
 
 public class SkillListener implements Listener {
     
-    // GOLD COLOR HELPER (karena Color.GOLD tidak ada)
+    // GOLD COLOR HELPER
     private static final Color GOLD = Color.fromRGB(255, 215, 0);
     private static final Color MOON_YELLOW = Color.fromRGB(255, 223, 100);
     
@@ -29,7 +30,7 @@ public class SkillListener implements Listener {
     
     // Config constants
     private static final int MAX_COMBO = 3;
-    private static final long COMBO_WINDOW_MS = 1200; // 1.2 detik dalam ms
+    private static final long COMBO_WINDOW_MS = 1200;
     private static final int MAX_LUNAR_GAUGE = 100;
     private static final int GAUGE_PER_HIT = 25;
     
@@ -48,12 +49,9 @@ public class SkillListener implements Listener {
         if (!(e.getEntity() instanceof LivingEntity target)) return;
         
         LunarPlayerData data = getData(p);
-        
-        // Add Lunar Gauge on-hit
         data.addGauge(GAUGE_PER_HIT);
         sendGaugeUpdate(p, data);
         
-        // Combo System
         long now = System.currentTimeMillis();
         if (now - data.lastHitTime < COMBO_WINDOW_MS) {
             data.combo++;
@@ -65,7 +63,6 @@ public class SkillListener implements Listener {
         }
         data.lastHitTime = now;
         
-        // Screen shake on combo 2+
         if (data.combo >= 2) {
             triggerScreenShake(p, 0.08, 3);
         }
@@ -81,7 +78,6 @@ public class SkillListener implements Listener {
             LunarPlayerData data = getData(p);
             
             if (data.isCharging) {
-                // Release charge
                 data.isCharging = false;
                 if (data.chargeTicks >= 20) {
                     executeGoldenMoonRequiem(p);
@@ -90,7 +86,6 @@ public class SkillListener implements Listener {
                     sendGaugeUpdate(p, data);
                 }
             } else if (data.lunarGauge >= MAX_LUNAR_GAUGE) {
-                // Start charging
                 data.isCharging = true;
                 data.chargeTicks = 0;
                 startChargeEffect(p);
@@ -110,13 +105,17 @@ public class SkillListener implements Listener {
         if (data.isCharging) {
             data.chargeTicks++;
             updateChargeVisual(p, data.chargeTicks);
-            
             if (data.chargeTicks > 100) {
                 data.isCharging = false;
                 data.chargeTicks = 0;
                 sendActionBar(p, "§c✦ Charge cancelled");
             }
         }
+    }
+    
+    @EventHandler
+    public void onQuit(PlayerQuitEvent e) { // ✅ Now works with import
+        playerData.remove(e.getPlayer().getUniqueId());
     }
 
     // ==========================================
@@ -136,38 +135,28 @@ public class SkillListener implements Listener {
         final World world = p.getWorld();
         
         if (combo == 2) {
-            // 🌙 MOONFALL STRIKE
             p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.8f, 1.5f);
-            
             new BukkitRunnable() {
                 @Override
                 public void run() {
                     spawnCrescentTrail(p.getLocation(), p.getLocation().getDirection(), MOON_YELLOW, 12);
-                    
                     finalTarget.setVelocity(new Vector(0, 1.8, 0));
                     finalTarget.damage(6.0, finalP);
-                    
                     Location impactLoc = finalTarget.getLocation().add(0, 0.5, 0);
                     world.spawnParticle(Particle.EXPLOSION, impactLoc, 1);
                     world.spawnParticle(Particle.DUST, impactLoc, 20, new Particle.DustOptions(MOON_YELLOW, 2.0f));
                     world.spawnParticle(Particle.FLAME, impactLoc, 10, 0.3, 0.3, 0.3, 0.1);
                     world.playSound(impactLoc, Sound.ENTITY_GENERIC_EXPLODE, 1.2f, 0.8f);
-                    
                     spawnLunarCrater(impactLoc, world, 30);
                     triggerScreenShake(finalP, 0.12, 5);
                 }
             }.runTaskLater(plugin, 8L);
-            
         } else if (combo == 3) {
-            // 🌙 CRESCENT WALTZ (Dash + Slash)
             p.playSound(p.getLocation(), Sound.ITEM_TRIDENT_RIPTIDE_1, 0.9f, 1.3f);
-            
             Vector dir = p.getLocation().getDirection().setY(0).normalize();
-            
             new BukkitRunnable() {
                 int dashTicks = 0;
                 final Vector dashVel = dir.clone().multiply(2.8);
-                
                 @Override
                 public void run() {
                     if (dashTicks >= 10) {
@@ -175,13 +164,10 @@ public class SkillListener implements Listener {
                         this.cancel();
                         return;
                     }
-                    
                     finalP.setVelocity(dashVel.clone().setY(0.1));
                     spawnCrescentTrail(finalP.getLocation(), dir, Color.ORANGE, 4);
                     world.spawnParticle(Particle.DUST, finalP.getLocation().add(0, 1, 0), 3, 
                         new Particle.DustOptions(MOON_YELLOW, 1.5f));
-                    
-                    // Hit entities during dash
                     world.getNearbyEntities(finalP.getLocation(), 1.5, 1.2, 1.5).forEach(en -> {
                         if (en instanceof LivingEntity le && !en.equals(finalP) && !le.hasMetadata("dashHit")) {
                             le.setMetadata("dashHit", new FixedMetadataValue(plugin, true));
@@ -190,12 +176,9 @@ public class SkillListener implements Listener {
                             spawnLunarSpark(le.getLocation().add(0, 1, 0), MOON_YELLOW, 6);
                         }
                     });
-                    
                     dashTicks++;
                 }
             }.runTaskTimer(plugin, 0, 1);
-            
-            // Clear metadata
             new BukkitRunnable() {
                 @Override
                 public void run() {
@@ -203,28 +186,21 @@ public class SkillListener implements Listener {
                 }
             }.runTaskLater(plugin, 40L);
         }
-        
         getData(p).combo = 0;
     }
     
     private void executeCrescentSlash(Player p, Vector direction) {
         World world = p.getWorld();
         Location slashLoc = p.getLocation().add(0, 1, 0);
-        
-        // Crescent arc particles
         for(double angle = -60; angle <= 60; angle += 8) {
             double rad = Math.toRadians(angle);
             Vector offset = new Vector(Math.cos(rad) * 2.5, 0, Math.sin(rad) * 2.5);
             Location particleLoc = slashLoc.clone().add(offset.rotateAroundY(Math.toRadians(90)));
-            
             world.spawnParticle(Particle.DUST, particleLoc, 2, new Particle.DustOptions(GOLD, 2.2f));
             world.spawnParticle(Particle.FLAME, particleLoc, 1, 0.1, 0.1, 0.1, 0);
         }
-        
         world.playSound(slashLoc, Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1.5f, 1.4f);
         world.playSound(slashLoc, Sound.BLOCK_GLASS_BREAK, 0.6f, 1.2f);
-        
-        // Damage in arc
         world.getNearbyEntities(slashLoc, 3.5, 2.0, 3.5).forEach(en -> {
             if (en instanceof LivingEntity le && !en.equals(p)) {
                 Vector toEnemy = le.getLocation().toVector().subtract(p.getLocation().toVector()).setY(0).normalize();
@@ -237,7 +213,6 @@ public class SkillListener implements Listener {
                 }
             }
         });
-        
         triggerScreenShake(p, 0.15, 6);
     }
 
@@ -248,11 +223,9 @@ public class SkillListener implements Listener {
         final Player finalP = p;
         final World world = p.getWorld();
         final Location center = p.getLocation().clone();
-        
         p.playSound(center, Sound.BLOCK_BELL_RESONATE, 1.5f, 1.0f);
         p.playSound(center, Sound.ENTITY_WITHER_SPAWN, 0.8f, 0.9f);
         p.sendTitle("§f§l🌕", "§6§lGOLDEN MOON REQUIEM", 5, 20, 10);
-        
         p.setVelocity(new Vector(0, 0.6, 0));
         p.setInvulnerable(true);
         
@@ -283,12 +256,9 @@ public class SkillListener implements Listener {
     }
     
     private void executeMoonImpact(Player p, Location center, World world) {
-        // Screen flash
         for(Player viewer : center.getWorld().getPlayers()) {
             viewer.sendTitle("§f§l✦", "§e§lMOONFALL", 3, 10, 5);
         }
-        
-        // Lightning strikes
         for(int i = 0; i < 5; i++) {
             final int delay = i * 4;
             new BukkitRunnable() {
@@ -302,45 +272,34 @@ public class SkillListener implements Listener {
                 }
             }.runTaskLater(plugin, delay);
         }
-        
-        // Ground eruption
         world.spawnParticle(Particle.EXPLOSION_EMITTER, center, 8);
         world.spawnParticle(Particle.DUST, center, 80, 5, 2, 5, 0.2, 
             new Particle.DustOptions(Color.ORANGE, 3.5f));
         world.spawnParticle(Particle.FLAME, center, 60, 4, 1.5, 4, 0.15);
         world.spawnParticle(Particle.CLOUD, center, 40, 6, 2, 6, 0.2);
-        
-        // Block crack with fallback
         try {
             world.spawnParticle(Particle.valueOf("BLOCK_CRACK"), center, 150, 7, 1, 7, 0.15,
                 Bukkit.createBlockData(Material.GOLD_BLOCK));
         } catch(Exception ignored) {
             world.spawnParticle(Particle.CLOUD, center, 100, 6, 1.5, 6, 0.2);
         }
-        
-        // Epic sounds
         world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 2.5f, 0.7f);
         world.playSound(center, Sound.BLOCK_ANVIL_LAND, 2f, 0.5f);
         world.playSound(center, Sound.ENTITY_WITHER_DEATH, 1.5f, 0.8f);
         world.playSound(center, Sound.BLOCK_AMETHYST_CLUSTER_BREAK, 1.0f, 0.6f);
-        
-        // AOE Damage
         world.getNearbyEntities(center, 12.0, 12.0, 12.0).forEach(en -> {
             if (en instanceof LivingEntity le && !en.equals(p)) {
                 double dist = le.getLocation().distance(center);
                 double damage = 45.0 * (1.0 - dist / 12.0);
-                
                 le.damage(Math.max(damage, 10.0), p);
                 le.setVelocity(new Vector(0, 2.2, 0));
                 le.setFireTicks(140);
-                
                 le.getWorld().spawnParticle(Particle.CRIT, le.getLocation().add(0, 1, 0), 20, 0.4, 0.4, 0.4, 0.1);
                 le.getWorld().spawnParticle(Particle.DUST, le.getLocation().add(0, 1, 0), 15, 
                     new Particle.DustOptions(MOON_YELLOW, 2.0f));
                 world.playSound(le.getLocation(), Sound.ENTITY_GENERIC_HURT, 1f, 1.2f);
             }
         });
-        
         spawnLunarZone(center, world, p, 120);
     }
 
@@ -369,7 +328,6 @@ public class SkillListener implements Listener {
             Vector offset = direction.clone().multiply(progress * 2.5);
             double arc = Math.sin(progress * Math.PI) * 0.8;
             offset.rotateAroundY(Math.toRadians(90 + arc * 30));
-            
             Location particleLoc = from.clone().add(0, 1, 0).add(offset);
             world.spawnParticle(Particle.DUST, particleLoc, 1, 
                 new Particle.DustOptions(color, 2.0f));
@@ -382,7 +340,6 @@ public class SkillListener implements Listener {
             @Override
             public void run() {
                 if (ticks >= durationTicks) { this.cancel(); return; }
-                
                 double radius = 3.0 + Math.sin(ticks * 0.3) * 0.5;
                 for(double angle = 0; angle < 360; angle += 12) {
                     double rad = Math.toRadians(angle);
@@ -402,17 +359,14 @@ public class SkillListener implements Listener {
                 @Override
                 public void run() {
                     if(ticks >= 40) { this.cancel(); return; }
-                    
                     double rotation = ticks * 3;
                     double angle = Math.toRadians(baseAngle + rotation);
                     Location cornerLoc = center.clone().add(
                         Math.cos(angle) * 9, 0.3, Math.sin(angle) * 9
                     );
-                    
                     world.spawnParticle(Particle.DUST, cornerLoc, 2, 
                         new Particle.DustOptions(color, 2.0f));
                     world.spawnParticle(Particle.FLAME, cornerLoc, 1, 0.1, 0.1, 0.1, 0);
-                    
                     if(ticks % 4 == 0) {
                         double nextAngle = Math.toRadians(baseAngle + 60 + rotation);
                         Location nextLoc = center.clone().add(
@@ -432,19 +386,15 @@ public class SkillListener implements Listener {
             @Override
             public void run() {
                 if(frame >= 25) { this.cancel(); return; }
-                
                 double y = frame * 0.8;
                 Location bladeCenter = center.clone().add(0, y, 0);
-                
                 for(double h = 0; h < 6; h += 0.6) {
                     world.spawnParticle(Particle.DUST, bladeCenter.clone().add(0, h, 0), 2,
                         new Particle.DustOptions(GOLD, 2.5f));
                     world.spawnParticle(Particle.END_ROD, bladeCenter.clone().add(0, h, 0), 1, 0, 0, 0, 0);
                 }
-                
                 world.spawnParticle(Particle.DUST, bladeCenter, 8, 0.5, 1, 0.5, 0,
                     new Particle.DustOptions(MOON_YELLOW, 3.0f));
-                
                 frame++;
             }
         }.runTaskTimer(plugin, 0, 1);
@@ -461,7 +411,6 @@ public class SkillListener implements Listener {
                     this.cancel(); 
                     return; 
                 }
-                
                 for(int i = 0; i < 5; i++) {
                     Location particleLoc = center.clone().add(
                         (Math.random() - 0.5) * 10,
@@ -481,7 +430,6 @@ public class SkillListener implements Listener {
         double dist = from.distance(to);
         if(dist < 0.1) return;
         dir.normalize().multiply(0.6);
-        
         World world = from.getWorld();
         for(double i = 0; i < dist; i += 0.6) {
             world.spawnParticle(Particle.DUST, from.clone().add(dir.clone().multiply(i)), 1,
@@ -491,7 +439,6 @@ public class SkillListener implements Listener {
     
     private void triggerScreenShake(Player p, double intensity, int ticks) {
         if(intensity <= 0) return;
-        
         Location original = p.getLocation().clone();
         new BukkitRunnable() {
             int count = 0;
@@ -502,7 +449,6 @@ public class SkillListener implements Listener {
                     this.cancel();
                     return;
                 }
-                
                 double shakeX = (Math.random() - 0.5) * intensity;
                 double shakeZ = (Math.random() - 0.5) * intensity;
                 Location shaken = original.clone().add(shakeX, 0, shakeZ);
@@ -519,14 +465,12 @@ public class SkillListener implements Listener {
     private void startChargeEffect(Player p) {
         sendActionBar(p, "§e§l✦ CHARGING... §7[§f▮▮▮▮▮§7]");
         p.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 0.6f, 1.0f);
-        
         new BukkitRunnable() {
             int chargeFrame = 0;
             @Override
             public void run() {
                 LunarPlayerData data = getData(p);
                 if(!data.isCharging) { this.cancel(); return; }
-                
                 double radius = 1.5 + Math.sin(chargeFrame * 0.4) * 0.8;
                 for(double angle = 0; angle < 360; angle += 20) {
                     double rad = Math.toRadians(angle);
@@ -536,11 +480,9 @@ public class SkillListener implements Listener {
                     p.getWorld().spawnParticle(Particle.DUST, auraLoc, 1,
                         new Particle.DustOptions(GOLD, 2.0f));
                 }
-                
                 int bars = Math.min(5, data.chargeTicks / 20);
                 String bar = "§7[§f" + "▮".repeat(bars) + "§7" + "▯".repeat(5 - bars) + "]";
                 sendActionBar(p, "§e§l✦ CHARGING... §7" + bar + " §f" + (data.chargeTicks / 20) + "s");
-                
                 chargeFrame++;
             }
         }.runTaskTimer(plugin, 0, 2);
@@ -581,21 +523,14 @@ public class SkillListener implements Listener {
         p.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(msg));
     }
     
-    // Clean up player data on quit
-    @EventHandler
-    public void onQuit(PlayerQuitEvent e) {
-        playerData.remove(e.getPlayer().getUniqueId());
-    }
-    
     private static class LunarPlayerData {
         int combo = 0;
         long lastHitTime = 0;
         int lunarGauge = 0;
         boolean isCharging = false;
         int chargeTicks = 0;
-        
         void addGauge(int amount) {
             lunarGauge = Math.min(MAX_LUNAR_GAUGE, lunarGauge + amount);
         }
     }
-                    }
+                }
