@@ -67,7 +67,7 @@ public class SkillListener implements Listener {
             executeBasicStrike(p, target);
         }
         data.lastHitTime = now;
-        if (data.combo >= 2) triggerScreenShake(p, 0.05, 2);
+        if (data.combo >= 2) triggerScreenShake(p, 0.05f, 2);
     }
     
     @EventHandler
@@ -351,7 +351,8 @@ public class SkillListener implements Listener {
         });
         spawnBlessingZone(center, world, p, duration, isElite);
         try {
-            p.setHealth(p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+            // ✅ FIX: Attribute.MAX_HEALTH (bukan GENERIC_MAX_HEALTH)
+            p.setHealth(p.getAttribute(Attribute.MAX_HEALTH).getValue());
             p.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 200, isElite ? 1 : 0, false, false));
             p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 150, 1, false, false));
         } catch(Exception ignored) {}
@@ -385,8 +386,9 @@ public class SkillListener implements Listener {
                     world.getNearbyEntities(center, zoneRadius, zoneRadius, zoneRadius).forEach(en -> {
                         if(en instanceof LivingEntity le && !en.equals(caster)) {
                             try {
-                                if(le.getHealth() < le.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()) {
-                                    le.setHealth(Math.min(le.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue(), le.getHealth() + 0.5));
+                                // ✅ FIX: Attribute.MAX_HEALTH
+                                if(le.getHealth() < le.getAttribute(Attribute.MAX_HEALTH).getValue()) {
+                                    le.setHealth(Math.min(le.getAttribute(Attribute.MAX_HEALTH).getValue(), le.getHealth() + 0.5));
                                     spawnLunarSpark(le.getLocation().add(0, 1.5, 0), MOON_WHITE, 3);
                                 }
                             } catch(Exception ignored) {}
@@ -494,6 +496,7 @@ public class SkillListener implements Listener {
         }.runTaskTimer(plugin, 0, 1);
     }
     
+    // ✅ FIX: Parameter intensity pakai float
     private void triggerScreenShake(Player p, float intensity, int ticks) {
         if(intensity <= 0) return;
         Location original = p.getLocation().clone();
@@ -567,4 +570,4 @@ public class SkillListener implements Listener {
         boolean parryBonus = false; boolean moonStepReady = true;
         void addGauge(int amount) { lunarGauge = Math.min(MAX_LUNAR_GAUGE, lunarGauge + amount); }
     }
-                        }
+                                }
