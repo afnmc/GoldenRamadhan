@@ -62,22 +62,11 @@ public class ArmorManager implements Listener {
         updateArmorBonus(e.getPlayer());
     }
     
-    @EventHandler
-    public void onArmorChange(org.bukkit.event.player.PlayerItemChangeEvent e) {
-        if(e.getEntity() instanceof Player p) {
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    updateArmorBonus(p);
-                }
-            }.runTaskLater(plugin, 5);
-        }
-    }
+    // ✅ FIX: Hapus onArmorChange karena PlayerItemChangeEvent tidak ada di Bukkit
     
     private void updateArmorBonus(Player p) {
         ArmorSetData data = playerArmorData.computeIfAbsent(p.getUniqueId(), k -> new ArmorSetData());
         
-        // Remove old effects safely
         try { p.removePotionEffect(PotionEffectType.NIGHT_VISION); } catch(Exception ignored) {}
         try { p.removePotionEffect(PotionEffectType.SPEED); } catch(Exception ignored) {}
         
@@ -262,4 +251,4 @@ public class ArmorManager implements Listener {
         boolean auraTask = false;
         boolean moonStepReady = true;
     }
-                                 }
+                                                }
