@@ -1,5 +1,4 @@
 # 🌙 GoldenMoon Plugin - Config Ramadhan Edition
-# Edit file ini untuk mengubah reward, key, crate, dll.
 
 # --- Waktu & Visual ---
 daily-reset-hour-wib: 6
@@ -21,7 +20,7 @@ trader:
     command: "excellence givekey %player% excellent 1"
     message: "§e✦ §fTukar berhasil! §e1 Excellent Key §ftelah ditambahkan."
 
-# --- Admin Kit Config ---
+# --- Admin Kit Config (FIXED - LENGKAP) ---
 admin-kits:
   crescent:
     name: "§b§lCrescent Guardian Kit"
@@ -48,8 +47,7 @@ admin-kits:
           - "§7Bagian dari set Crescent Guardian."
           - "§aSet Bonus: +Speed while gauge > 50%"
       boots:
-        type: "boots"
-        material: NETHERITE_BOOTS
+        type: "boots"        material: NETHERITE_BOOTS
         name: "§fCrescent Boots"
         lore:
           - "§7Bagian dari set Crescent Guardian."
