@@ -47,7 +47,7 @@ public class SkillListener implements Listener {
         if (!isLunarBlade(p)) return;
         if (!(e.getEntity() instanceof LivingEntity target)) return;
         
-        // Anti-spam        String hitKey = "lunarHit_" + p.getUniqueId().toString().substring(0, 8);
+        // Anti-spam hit - FIX: final variable for inner class        final String hitKey = "lunarHit_" + p.getUniqueId().toString().substring(0, 8);
         if (target.hasMetadata(hitKey)) return;
         target.setMetadata(hitKey, new FixedMetadataValue(plugin, true));
         new BukkitRunnable() {
@@ -169,7 +169,7 @@ public class SkillListener implements Listener {
             }.runTaskLater(plugin, 4L);
         } else if (combo == 3) {
             world.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_HIT, 0.5f, 1.5f);
-            Vector dir = p.getLocation().getDirection().setY(0).normalize();
+            final Vector dir = p.getLocation().getDirection().setY(0).normalize();
             new BukkitRunnable() {
                 int ticks = 0;
                 @Override 
@@ -211,16 +211,15 @@ public class SkillListener implements Listener {
 
     // ===== SKILL 2: DASH SLASH (Sneak+Hit) =====
     private void executeSkill2_DashSlash(Player p, LivingEntity target) {
-        World world = p.getWorld();
-        Vector dir = p.getLocation().getDirection().setY(0).normalize();
-        p.setVelocity(dir.multiply(2.5).setY(0.3));
+        final World world = p.getWorld();
+        final Vector dir = p.getLocation().getDirection().setY(0).normalize();
+        p.setVelocity(dir.clone().multiply(2.5).setY(0.3));
         
         new BukkitRunnable() {
             int ticks = 0;
             @Override
             public void run() {
                 if (ticks >= 12) {
-                    // Impact
                     Location impactLoc = p.getLocation().add(0, 1, 0);
                     world.spawnParticle(Particle.EXPLOSION, impactLoc, 1);
                     world.spawnParticle(Particle.DUST, impactLoc, 20, new Particle.DustOptions(GOLD, 2.0f));
@@ -243,14 +242,14 @@ public class SkillListener implements Listener {
                 world.spawnParticle(Particle.DUST, trail, 4, new Particle.DustOptions(CRESCENT_SILVER, 1.8f));
                 world.spawnParticle(Particle.FLAME, trail, 2, 0.15f, 0.15f, 0.15f, 0);
                 ticks++;
-            }        }.runTaskTimer(plugin, 0, 1);
-    }
+            }
+        }.runTaskTimer(plugin, 0, 1);    }
 
     // ===== SKILL 3: ULTIMATE (Right-Click Hold) =====
     private void executeSkill3_Ultimate(Player p) {
         final World world = p.getWorld();
         final Location center = p.getLocation().clone();
-        boolean isElite = armorManager.hasFullEliteSet(p);
+        final boolean isElite = armorManager.hasFullEliteSet(p);
         
         p.playSound(center, Sound.BLOCK_AMETHYST_BLOCK_HIT, 1.0f, 1.0f);
         p.playSound(center, Sound.BLOCK_BEACON_ACTIVATE, 0.6f, 0.9f);
@@ -292,8 +291,8 @@ public class SkillListener implements Listener {
     }
     
     private void executeUltimateImpact(Player p, Location center, World world, boolean isElite) {
-        double radius = isElite ? 12.0 : 8.0;        world.spawnParticle(Particle.DUST, center, 50, (int)(radius/2), 1, (int)(radius/2), 0.1f, new Particle.DustOptions(MOON_WHITE, 1.8f));
-        world.spawnParticle(Particle.FLAME, center, 30, (int)(radius/3), 0.6f, (int)(radius/3), 0.1f);
+        double radius = isElite ? 12.0 : 8.0;
+        world.spawnParticle(Particle.DUST, center, 50, (int)(radius/2), 1, (int)(radius/2), 0.1f, new Particle.DustOptions(MOON_WHITE, 1.8f));        world.spawnParticle(Particle.FLAME, center, 30, (int)(radius/3), 0.6f, (int)(radius/3), 0.1f);
         world.playSound(center, Sound.BLOCK_AMETHYST_BLOCK_HIT, 1.2f, 0.9f);
         
         world.getNearbyEntities(center, radius, radius, radius).forEach(en -> {
@@ -341,8 +340,8 @@ public class SkillListener implements Listener {
         return offhand != null && offhand.hasItemMeta() && 
                offhand.getItemMeta().getPersistentDataContainer().has(GoldenMoon.SHIELD_KEY, PersistentDataType.BYTE);
     }
-        private LunarPlayerData getData(Player p) { 
-        return playerData.computeIfAbsent(p.getUniqueId(), k -> new LunarPlayerData()); 
+    
+    private LunarPlayerData getData(Player p) {         return playerData.computeIfAbsent(p.getUniqueId(), k -> new LunarPlayerData()); 
     }
     
     private boolean isLunarBlade(Player p) {
@@ -368,4 +367,4 @@ public class SkillListener implements Listener {
             lunarGauge = Math.min(MAX_LUNAR_GAUGE, lunarGauge + amount); 
         }
     }
-                                   }
+                                                     }
