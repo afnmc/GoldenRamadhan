@@ -5,12 +5,13 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 
 public class AdminCommand implements CommandExecutor {
     private final GoldenMoon plugin;
 
-    public AdminCommand(GoldenMoon plugin) { this.plugin = plugin; }
+    public AdminCommand(GoldenMoon plugin) { 
+        this.plugin = plugin; 
+    }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -36,32 +37,56 @@ public class AdminCommand implements CommandExecutor {
 
         switch (args[0].toLowerCase()) {
             case "daily" -> plugin.getDailyManager().openDailyMenu(player);
-            case "trader" -> new TraderGUI(plugin).open(player);
+            
+            case "trader" -> {
+                new TraderGUI(plugin).open(player);
+                player.sendMessage("§a✦ §fTrader GUI dibuka!");
+            }
+            
             case "getsword" -> {
-                ItemStack sword = plugin.getDailyManager().getSpecialBlade();
-                player.getInventory().addItem(sword);
+                player.getInventory().addItem(plugin.getDailyManager().getSpecialBlade());
                 player.sendMessage("§a✦ §fLunar Crescent Blade ditambahkan!");
                 player.playSound(player.getLocation(), org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
             }
+            
             case "getkit" -> {
-                if (args.length < 2) { player.sendMessage("§eGunakan: §f/gm getkit <crescent|elite>"); return true; }
+                if (args.length < 2) { 
+                    player.sendMessage("§eGunakan: §f/gm getkit <crescent|elite>"); 
+                    player.sendMessage("§7- §bcrescent§7: Crescent Guardian Set (4 armor + shield)");
+                    player.sendMessage("§7- §6elite§7: Golden Moon Elite Set (4 armor + shield)");
+                    return true; 
+                }
                 String kitType = args[1].toLowerCase();
+                if (!kitType.equals("crescent") && !kitType.equals("elite")) {
+                    player.sendMessage("§c✦ §fTipe kit tidak valid! Gunakan: §bcrescent §fatau §6elite");
+                    return true;
+                }
                 if (plugin.getArmorManager().giveKit(player, kitType)) {
-                    player.sendMessage("§a✦ §fKit §e" + kitType + " §fditambahkan!");
                     player.playSound(player.getLocation(), org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
-                } else {
-                    player.sendMessage("§c✦ §fTipe kit tidak valid! Gunakan: crescent atau elite");
                 }
             }
+            
             case "givefragment" -> {
-                if (args.length < 3) { player.sendMessage("§eGunakan: §f/gm givefragment <player> <amount>"); return true; }
+                if (args.length < 3) { 
+                    player.sendMessage("§eGunakan: §f/gm givefragment <player> <amount>"); 
+                    return true; 
+                }
                 Player target = Bukkit.getPlayer(args[1]);
-                if (target == null) { player.sendMessage("§c✦ §fPlayer tidak online!"); return true; }
+                if (target == null) { 
+                    player.sendMessage("§c✦ §fPlayer tidak online!"); 
+                    return true; 
+                }
                 int amount;
-                try { amount = Integer.parseInt(args[2]); } catch (NumberFormatException e) { player.sendMessage("§c✦ §fAmount harus angka!"); return true; }
+                try { 
+                    amount = Integer.parseInt(args[2]); 
+                } catch (NumberFormatException e) { 
+                    player.sendMessage("§c✦ §fAmount harus angka!"); 
+                    return true; 
+                }
                 plugin.getDailyManager().giveFragment(target, amount);
                 player.sendMessage("§a✦ §fBerikan §b" + amount + " Lunar Fragment §fke §e" + target.getName());
             }
+            
             default -> player.sendMessage("§c✦ §fCommand tidak dikenal! Gunakan /gm untuk help.");
         }
         return true;
