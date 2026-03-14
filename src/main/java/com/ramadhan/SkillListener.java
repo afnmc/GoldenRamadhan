@@ -17,6 +17,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
@@ -46,8 +47,8 @@ public class SkillListener implements Listener {
         this.plugin = plugin;
     }
 
-    @EventHandler
-    public void onQuit(PlayerQuitEvent e) {        data.remove(e.getPlayer().getUniqueId());
+    @EventHandler    public void onQuit(PlayerQuitEvent e) {
+        data.remove(e.getPlayer().getUniqueId());
     }
 
     @EventHandler
@@ -92,12 +93,12 @@ public class SkillListener implements Listener {
         Player p = (Player) e.getDamager();
         PlayerData d = get(p);
         
-        if (isWearingPiece(p, org.bukkit.inventory.EquipmentSlot.HEAD, GoldenMoon.ELITE_HELMET_KEY) && 
-            p.getHealth() < p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() * 0.7) {
+        if (isWearingPiece(p, EquipmentSlot.HEAD, GoldenMoon.ELITE_HELMET_KEY) && 
+            p.getHealth() < p.getAttribute(Attribute.MAX_HEALTH).getValue() * 0.7) {
             e.setDamage(e.getDamage() * 1.15);
-            if (r.nextInt(100) < 30) spawnSparkle(e.getEntity().getLocation(), p.getWorld(), CRIMSON, 3);
-        }        
-        if (isWearingPiece(p, org.bukkit.inventory.EquipmentSlot.CHEST, GoldenMoon.ARMOR_CHEST_KEY) && 
+            if (r.nextInt(100) < 30) spawnSparkle(e.getEntity().getLocation(), p.getWorld(), CRIMSON, 3);        }
+        
+        if (isWearingPiece(p, EquipmentSlot.CHEST, GoldenMoon.ARMOR_CHEST_KEY) && 
             e.getEntity() instanceof LivingEntity && !e.getEntity().equals(p)) {
             applyMoonMark((LivingEntity) e.getEntity());
         }
@@ -144,8 +145,8 @@ public class SkillListener implements Listener {
         }.runTaskTimer(plugin, 0, 1);
     }
 
-    private void spawnDetailedCrescent(Player p) {
-        final World w = p.getWorld();        final Location start = p.getEyeLocation().add(p.getLocation().getDirection());
+    private void spawnDetailedCrescent(Player p) {        final World w = p.getWorld();
+        final Location start = p.getEyeLocation().add(p.getLocation().getDirection());
         final Vector direction = p.getLocation().getDirection().normalize();
         boolean isElite = plugin.getArmorManager().hasFullEliteSet(p);
         
@@ -178,8 +179,8 @@ public class SkillListener implements Listener {
                     if (target instanceof LivingEntity && !target.equals(p)) {
                         LivingEntity le = (LivingEntity) target;
                         double baseDmg = isElite ? 8.0 : 6.0;
-                        if (isWearingPiece(p, org.bukkit.inventory.EquipmentSlot.HEAD, GoldenMoon.ELITE_HELMET_KEY) && 
-                            p.getHealth() < p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() * 0.7) {
+                        if (isWearingPiece(p, EquipmentSlot.HEAD, GoldenMoon.ELITE_HELMET_KEY) && 
+                            p.getHealth() < p.getAttribute(Attribute.MAX_HEALTH).getValue() * 0.7) {
                             baseDmg *= 1.15;
                         }
                         le.damage(baseDmg, p);
@@ -193,8 +194,8 @@ public class SkillListener implements Listener {
                 }
                 life++;
             }
-        }.runTaskTimer(plugin, 0, 1);
-    }
+        }.runTaskTimer(plugin, 0, 1);    }
+
     private void performLunarExecution(Player p) {
         World w = p.getWorld();
         Location center = p.getLocation();
@@ -242,8 +243,8 @@ public class SkillListener implements Listener {
                         Vector v = new Vector(xOff - slashOffset, y + 1.5, 0);
                         Vector finalV = rotate(v, s * 60); 
                         w.spawnParticle(Particle.DUST, center.clone().add(finalV), particleDensity, new Particle.DustOptions(WHITE, particleSize));
-                        w.spawnParticle(Particle.DUST, center.clone().add(finalV), isElite ? 3 : 2, new Particle.DustOptions(isElite ? GOLD : SILVER, isElite ? 1.7f : 1.5f));
-                    }                    
+                        w.spawnParticle(Particle.DUST, center.clone().add(finalV), isElite ? 3 : 2, new Particle.DustOptions(isElite ? GOLD : SILVER, isElite ? 1.7f : 1.5f));                    }
+                    
                     if (isElite) {
                         for (double y = -2.5; y <= 2.5; y += 0.4) {
                             double xOff = (y * y) * 0.25;
@@ -275,15 +276,15 @@ public class SkillListener implements Listener {
                 try {
                     if (isElite) {
                         double heal = 7.0;
-                        if (p.getHealth() < p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()) {
-                            p.setHealth(Math.min(p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue(), p.getHealth() + heal));
+                        if (p.getHealth() < p.getAttribute(Attribute.MAX_HEALTH).getValue()) {
+                            p.setHealth(Math.min(p.getAttribute(Attribute.MAX_HEALTH).getValue(), p.getHealth() + heal));
                         }
                         p.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, 200, 0, false, false));
                         p.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 250, 1, false, false));
                     } else if (hasCrescent) {
                         double heal = 6.0;
-                        if (p.getHealth() < p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()) {
-                            p.setHealth(Math.min(p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue(), p.getHealth() + heal));
+                        if (p.getHealth() < p.getAttribute(Attribute.MAX_HEALTH).getValue()) {
+                            p.setHealth(Math.min(p.getAttribute(Attribute.MAX_HEALTH).getValue(), p.getHealth() + heal));
                         }
                         p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 200, 1, false, false));
                         p.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 200, 0, false, false));
@@ -291,8 +292,8 @@ public class SkillListener implements Listener {
                 } catch (Exception ignored) {}
                 Color finaleColor = isElite ? GOLD : (hasCrescent ? SILVER : WHITE);
                 spawnSparkle(p.getLocation().add(0, 1.5, 0), w, finaleColor, isElite ? 25 : 15);
-            }
-        }.runTaskLater(plugin, 45);    }
+            }        }.runTaskLater(plugin, 45);
+    }
 
     private void applyMoonMark(LivingEntity target) {
         moonMarked.put(target.getUniqueId(), System.currentTimeMillis() + 5000);
@@ -310,7 +311,7 @@ public class SkillListener implements Listener {
         }.runTaskTimer(plugin, 0, 2);
     }
 
-    private boolean isWearingPiece(Player p, org.bukkit.inventory.EquipmentSlot slot, org.bukkit.NamespacedKey key) {
+    private boolean isWearingPiece(Player p, EquipmentSlot slot, org.bukkit.NamespacedKey key) {
         ItemStack item = null;
         switch (slot) {
             case HEAD: item = p.getInventory().getHelmet(); break;
@@ -340,8 +341,8 @@ public class SkillListener implements Listener {
 
     private boolean isHoldingSword(Player p) {
         ItemStack item = p.getInventory().getItemInMainHand();
-        return item != null && item.hasItemMeta() && 
-               item.getItemMeta().getPersistentDataContainer().has(GoldenMoon.SWORD_KEY, PersistentDataType.BYTE);    }
+        return item != null && item.hasItemMeta() &&                item.getItemMeta().getPersistentDataContainer().has(GoldenMoon.SWORD_KEY, PersistentDataType.BYTE);
+    }
 
     private void sab(Player p, String msg) {
         p.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(msg));
@@ -354,4 +355,4 @@ public class SkillListener implements Listener {
     private static class PlayerData {
         long lastSlash = 0, lastDash = 0, lastUlt = 0;
     }
-                     }
+                            }
