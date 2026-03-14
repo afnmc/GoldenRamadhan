@@ -59,7 +59,7 @@ public class AdminCommand implements CommandExecutor {
                 String kitType = args[1].toLowerCase();
                 if (!kitType.equals("crescent") && !kitType.equals("elite")) {
                     player.sendMessage("§c✦ §fTipe kit tidak valid! Gunakan: §bcrescent §fatau §6elite");
-                    return true;
+                    return true; 
                 }
                 if (plugin.getArmorManager().giveKit(player, kitType)) {
                     player.playSound(player.getLocation(), org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
@@ -79,7 +79,7 @@ public class AdminCommand implements CommandExecutor {
                 int amount;
                 try { 
                     amount = Integer.parseInt(args[2]); 
-                } catch (NumberFormatException e) { 
+                } catch(NumberFormatException e) { 
                     player.sendMessage("§c✦ §fAmount harus angka!"); 
                     return true; 
                 }
