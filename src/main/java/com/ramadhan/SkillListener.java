@@ -157,19 +157,16 @@ public class SkillListener implements Listener {
         final Location tl = t.getLocation().clone();
         final Vector dir = tl.toVector().subtract(pl.toVector()).setY(0).normalize();
 
-        // PHASE 1: CHARGING RINGS (FRAME BY FRAME)
         for (int f = 0; f < 6; f++) {
             final int fr = f;
             new BukkitRunnable() {
                 public void run() {
                     Location sl = pl.clone().add(p.getLocation().getDirection().multiply(0.9f));
-                    // Ring 1 (Detail Partikel Tinggi)
                     for (int i = 0; i < 30; i++) {
                         double a = Math.toRadians(i * 12 + fr * 15);
                         Vector ro = new Vector(Math.cos(a) * 0.8f, 0.45f + (float) (Math.sin(fr * 0.5) * 0.35), Math.sin(a) * 0.8f);
                         w.spawnParticle(Particle.DUST, sl.clone().add(ro), 1, new Particle.DustOptions(Y, 1.7f));
                     }
-                    // Ring 2 (Sparkle)
                     for (int i = 0; i < 20; i++) {
                         double a = Math.toRadians(i * 18 + fr * 20);
                         Vector ro = new Vector(Math.cos(a) * 0.4f, 0.35f, Math.sin(a) * 0.4f);
@@ -180,33 +177,25 @@ public class SkillListener implements Listener {
             }.runTaskLater(plugin, f * 2);
         }
 
-        // PHASE 2: DASH TRAIL (ANIMATED BLADE)
         new BukkitRunnable() {
             int df = 0;
             public void run() {
                 if (df >= 8) { cancel(); return; }
                 float pr = (float) df / 7f;
                 Location dl = pl.clone().add(dir.clone().multiply(1.5f * pr)).add(dir.clone().multiply(0.8f));
-                
-                // Trail Details
                 w.spawnParticle(Particle.DUST, dl, 20, new Particle.DustOptions(Y, 2.6f));
                 w.spawnParticle(Particle.DUST, dl, 15, new Particle.DustOptions(W, 2.1f));
                 w.spawnParticle(Particle.DUST, dl, 10, new Particle.DustOptions(A, 1.8f));
-                
-                // Flame burst per frame
                 if (df % 2 == 0) w.spawnParticle(Particle.FLAME, dl, 5, 0.2, 0.2, 0.2, 0.05);
                 df++;
             }
         }.runTaskTimer(plugin, 12, 1);
 
-        // PHASE 3: IMPACT (GRID EXPLOSION)
         new BukkitRunnable() {
             public void run() {
                 w.playSound(tl, Sound.BLOCK_AMETHYST_BLOCK_HIT, 1.1f, 2.1f);
                 w.playSound(tl, Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1.0f, 1.5f);
                 w.spawnParticle(Particle.EXPLOSION, tl, 3);
-                
-                // 5x5 Grid Impact Pattern
                 for (int row = -4; row <= 4; row++) {
                     for (int col = -4; col <= 4; col++) {
                         Vector go = rot(new Vector(col * 0.6f, row * 0.7f, 0), dir);
@@ -214,17 +203,12 @@ public class SkillListener implements Listener {
                         for(int i=0; i<3; i++) w.spawnParticle(Particle.DUST, tl.clone().add(go), 1, new Particle.DustOptions(c, 1.6f));
                     }
                 }
-                
-                // Massive Scatter Burst
                 for (int i = 0; i < 50; i++) {
                     Vector sp = new Vector((r.nextDouble()-0.5)*3, (r.nextDouble()-0.5)*3, (r.nextDouble()-0.5)*3);
                     w.spawnParticle(Particle.DUST, tl.clone().add(sp), 1, new Particle.DustOptions(G, 1.2f));
                 }
-
                 t.damage(4, p);
                 t.setVelocity(dir.clone().multiply(0.8f).setY(0.5f));
-                
-                // Reset State
                 if (data.containsKey(p.getUniqueId())) {
                     get(p).s1 = false;
                     get(p).ls = 0;
@@ -237,14 +221,11 @@ public class SkillListener implements Listener {
         final World w = p.getWorld();
         final Location c = p.getLocation().clone();
         sab(p, "§e§l✦ §fHUJAN BERKAH!");
-
-        // PHASE 1: SKY RINGS (ANIMATED)
         new BukkitRunnable() {
             int pf = 0;
             public void run() {
                 if (pf >= 28) { cancel(); return; }
                 float cr = 5.5f + (float) (Math.sin(pf * 0.3) * 0.8);
-                // Dual Outer Rings
                 for (int i = 0; i < 25; i++) {
                     double a = Math.toRadians(i * 14.4 + pf * 3);
                     w.spawnParticle(Particle.DUST, c.clone().add(Math.cos(a) * cr, 9.5f, Math.sin(a) * cr), 1, new Particle.DustOptions(S, 1.6f));
@@ -255,14 +236,12 @@ public class SkillListener implements Listener {
             }
         }.runTaskTimer(plugin, 0, 2);
 
-        // PHASE 2: FALLING BLADES
         for (int o = 0; o < 12; o++) {
             final int ob = o;
             new BukkitRunnable() {
                 public void run() {
                     double an = r.nextDouble() * Math.PI * 2, di = 1.8 + r.nextDouble() * 5.5;
                     final Location ds = c.clone().add(Math.cos(an) * di, 19, Math.sin(an) * di);
-                    
                     new BukkitRunnable() {
                         int ff = 0;
                         public void run() {
@@ -278,7 +257,6 @@ public class SkillListener implements Listener {
                                 }
                                 cancel(); return;
                             }
-                            // Blade Core & Trail
                             w.spawnParticle(Particle.DUST, ds.clone().subtract(0, ff * 0.55, 0), 3, new Particle.DustOptions(Y, 1.8f));
                             w.spawnParticle(Particle.DUST, ds.clone().subtract(0, (ff-1) * 0.55, 0), 2, new Particle.DustOptions(W, 1.4f));
                             ff++;
@@ -294,14 +272,11 @@ public class SkillListener implements Listener {
         final Location c = p.getLocation().clone();
         p.setInvulnerable(true);
         p.sendTitle("§f§l🌕", "§6§l✦ PANGGILAN BULAN ✦", 8, 32, 11);
-        
-        // PHASE 1: RISING MOON BLADE (ANIMATED)
         new BukkitRunnable() {
             int bf = 0;
             public void run() {
                 if (bf >= 25) { cancel(); return; }
                 Location bl = c.clone().add(0, 6 + bf * 0.4, 0);
-                // Grid Blade Visualization
                 for (int row = -5; row <= 5; row++) {
                     for (int col = -3; col <= 3; col++) {
                         Color cc = (row + col) % 2 == 0 ? Y : W;
@@ -313,19 +288,15 @@ public class SkillListener implements Listener {
             }
         }.runTaskTimer(plugin, 5, 2);
 
-        // PHASE 2: IMPACT
         new BukkitRunnable() {
             public void run() {
                 w.playSound(c, Sound.BLOCK_BEACON_ACTIVATE, 1.3f, 1f);
                 w.playSound(c, Sound.ENTITY_GENERIC_EXPLODE, 1.0f, 0.8f);
                 w.spawnParticle(Particle.FLASH, c, 5);
-                
-                // Blast Wave
                 for (int i = 0; i < 100; i++) {
                     double a = Math.toRadians(i * 3.6);
                     w.spawnParticle(Particle.DUST, c.clone().add(Math.cos(a)*8, 0.5, Math.sin(a)*8), 1, new Particle.DustOptions(Y, 2.0f));
                 }
-
                 for (Entity en : w.getNearbyEntities(c, 8, 8, 8)) {
                     if (en instanceof LivingEntity && !en.equals(p)) {
                         ((LivingEntity) en).damage(10, p);
@@ -333,9 +304,16 @@ public class SkillListener implements Listener {
                     }
                 }
                 
-                // Heal & Buffs
-                double maxH = p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
-                p.setHealth(Math.min(maxH, p.getHealth() + 8));
+                // --- BAGIAN PERBAIKAN HEALING ---
+                try {
+                    // Coba MAX_HEALTH dulu, kalau gagal dia ke catch
+                    double maxH = p.getAttribute(Attribute.MAX_HEALTH).getValue();
+                    p.setHealth(Math.min(maxH, p.getHealth() + 8));
+                } catch (Exception e) {
+                    // Cadangan jika versi API berbeda
+                    p.setHealth(Math.min(20.0, p.getHealth() + 8));
+                }
+                
                 p.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 400, 1));
                 p.setInvulnerable(false);
                 sab(p, "§6§l✦ §fBERKAH BULAN AKTIF!");
@@ -349,19 +327,16 @@ public class SkillListener implements Listener {
             public void run() {
                 D d = get(p);
                 if (!d.ch || !p.isOnline()) { cancel(); return; }
-                
-                // Spiral Charging Aura
                 double ra = 1.3 + Math.sin(pu * 0.38) * 0.5;
                 for (int a = 0; a < 20; a++) {
                     double an = Math.toRadians(a * 18 + pu * 5);
                     p.getWorld().spawnParticle(Particle.DUST, p.getLocation().add(Math.cos(an) * ra, 1, Math.sin(an) * ra), 1, new Particle.DustOptions(Y, 1.8f));
                     p.getWorld().spawnParticle(Particle.DUST, p.getLocation().add(Math.cos(an) * (ra*0.7), 0.5, Math.sin(an) * (ra*0.7)), 1, new Particle.DustOptions(W, 1.4f));
                 }
-                
-                // Charging Bar
                 int progress = Math.min(5, pu / 4);
-                String bar = "§f" + "▮".repeat(progress) + "§7" + "▯".repeat(5 - progress);
-                sab(p, "§6§l✦ §fENERGI: " + bar);
+                StringBuilder bar = new StringBuilder("§f");
+                for(int i=0; i<5; i++) bar.append(i < progress ? "▮" : "▯");
+                sab(p, "§6§l✦ §fENERGI: " + bar.toString());
                 pu++;
             }
         }.runTaskTimer(plugin, 0, 2);
