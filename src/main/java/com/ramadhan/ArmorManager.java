@@ -3,9 +3,11 @@ package com.ramadhan;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
-import org.bukkit.event.*;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -45,9 +47,9 @@ public class ArmorManager implements Listener {
         return hasPiece(p, GoldenMoon.ELITE_HELMET_KEY) &&
                hasPiece(p, GoldenMoon.ELITE_CHEST_KEY) &&
                hasPiece(p, GoldenMoon.ELITE_LEGS_KEY) &&
-               hasPiece(p, GoldenMoon.ELITE_BOOTS_KEY);
-    }
-        public boolean hasCrescentChestplate(Player p) {
+               hasPiece(p, GoldenMoon.ELITE_BOOTS_KEY);    }
+    
+    public boolean hasCrescentChestplate(Player p) {
         return hasPiece(p, GoldenMoon.ARMOR_CHEST_KEY);
     }
     
@@ -94,9 +96,9 @@ public class ArmorManager implements Listener {
             e.setDamage(e.getDamage() * 0.95);
         } else if(new Random().nextInt(100) < 10) {
             e.setCancelled(true);
-            p.getWorld().spawnParticle(Particle.FLASH, p.getLocation().add(0, 1, 0), 1);
-        }
-    }    
+            p.getWorld().spawnParticle(Particle.FLASH, p.getLocation().add(0, 1, 0), 1);        }
+    }
+    
     public boolean tryMoonStep(Player p) {
         ArmorSetData data = playerArmorData.get(p.getUniqueId());
         if(data == null || !data.setBonusActive || data.isElite) return false;
@@ -117,7 +119,6 @@ public class ArmorManager implements Listener {
         return true;
     }
     
-    // ✅ FIX: GIVE KIT LENGKAP - SEMUA SLOT TERISI
     public boolean giveKit(Player p, String kitType) {
         org.bukkit.configuration.ConfigurationSection kitConfig = 
             plugin.getConfig().getConfigurationSection("admin-kits." + kitType);
@@ -130,7 +131,6 @@ public class ArmorManager implements Listener {
         p.sendMessage("§6✦ §fMenerima: " + kitName);
         p.sendMessage("§7--------------------------------");
         
-        // ✅ Ambil section "items"
         org.bukkit.configuration.ConfigurationSection itemsSection = 
             kitConfig.getConfigurationSection("items");
         if(itemsSection == null) {
@@ -140,18 +140,16 @@ public class ArmorManager implements Listener {
         
         int itemsGiven = 0;
         
-        // ✅ Loop SEMUA item di kit
         for(String itemKey : itemsSection.getKeys(false)) {
             org.bukkit.configuration.ConfigurationSection itemConfig = 
                 itemsSection.getConfigurationSection(itemKey);
             if(itemConfig == null) continue;
-                        ItemStack item = createKitItem(itemConfig);
-            if(item != null) {
+            
+            ItemStack item = createKitItem(itemConfig);            if(item != null) {
                 String type = itemConfig.getString("type", "").toLowerCase();
                 ItemMeta meta = item.getItemMeta();
                 String itemName = meta != null ? meta.getDisplayName() : item.getType().name();
                 
-                // ✅ Equip di slot yang BENAR
                 switch(type) {
                     case "helmet" -> {
                         p.getInventory().setHelmet(item);
@@ -182,7 +180,6 @@ public class ArmorManager implements Listener {
             }
         }
         
-        // ✅ Give shield di offhand
         ItemStack shield = createLunarAegis();
         p.getInventory().setItemInOffHand(shield);
         p.sendMessage("§a  [OFFHAND] §f" + shield.getItemMeta().getDisplayName());
@@ -191,14 +188,13 @@ public class ArmorManager implements Listener {
         p.sendMessage("§7--------------------------------");
         p.sendMessage("§e✦ §fTotal: §b" + itemsGiven + " §fitem diberikan!");
         
-        // Refresh armor bonus
         updateArmorBonus(p);
         return true;
-    }    
+    }
+    
     private ItemStack createKitItem(org.bukkit.configuration.ConfigurationSection config) {
         try {
-            Material mat = Material.valueOf(config.getString("material", "NETHERITE_CHESTPLATE"));
-            String type = config.getString("type", "");
+            Material mat = Material.valueOf(config.getString("material", "NETHERITE_CHESTPLATE"));            String type = config.getString("type", "");
             ItemStack item = new ItemStack(mat);
             ItemMeta meta = item.getItemMeta();
             if(meta != null) {
@@ -206,7 +202,6 @@ public class ArmorManager implements Listener {
                 meta.setLore(config.getStringList("lore"));
                 meta.setUnbreakable(true);
                 
-                // ✅ Set PDC key berdasarkan type
                 NamespacedKey key = null;
                 switch(type.toLowerCase()) {
                     case "helmet" -> key = GoldenMoon.ARMOR_HELMET_KEY;
@@ -243,12 +238,12 @@ public class ArmorManager implements Listener {
                 "§e§lABILITY:",
                 "§f- §6Block: §780% damage reduction",
                 "§f- §bPerfect Parry: §7Reflect damage",
-                "",                "§8§oUnbreakable"
+                "",
+                "§8§oUnbreakable"
             ));
             meta.setUnbreakable(true);
             meta.getPersistentDataContainer().set(GoldenMoon.SHIELD_KEY, PersistentDataType.BYTE, (byte)1);
-            shield.setItemMeta(meta);
-        }
+            shield.setItemMeta(meta);        }
         return shield;
     }
     
@@ -261,4 +256,4 @@ public class ArmorManager implements Listener {
         boolean isElite = false;
         boolean moonStepReady = true;
     }
-                }
+                       }
