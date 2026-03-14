@@ -71,7 +71,6 @@ public class SkillListener implements Listener {
         }
 
         target.damage(2.0, p);
-        // 🌀 Random wind slash effect on hit
         animateWindSlash(target.getLocation().add(0, 1, 0), p.getWorld(), p.getLocation().getDirection());
     }
 
@@ -96,8 +95,8 @@ public class SkillListener implements Listener {
             e.setCancelled(true);
             PlayerSkillData data = getData(p);
             if (data.lunarGauge >= MAX_LUNAR_GAUGE && !data.isCharging && !data.skill3Cooldown) {
-                data.isCharging = true;                data.chargeStart = System.currentTimeMillis();
-                sendActionBar(p, "§6§l✦ §fMenahan... §7(Lepas untuk Panggilan Bulan)");
+                data.isCharging = true;
+                data.chargeStart = System.currentTimeMillis();                sendActionBar(p, "§6§l✦ §fMenahan... §7(Lepas untuk Panggilan Bulan)");
                 animateChargeSequence(p);
             } else if (data.isCharging) {
                 long ct = System.currentTimeMillis() - data.chargeStart;
@@ -141,38 +140,31 @@ public class SkillListener implements Listener {
     }
 
     // ==========================================
-    // 🌀 WIND SLASH EFFECT (Random angles, fluid)
+    // 🌀 WIND SLASH EFFECT
     // ==========================================
     private void animateWindSlash(org.bukkit.Location loc, org.bukkit.World world, Vector direction) {
-        // Random slash angle (-45 to +45 degrees from direction)
-        double slashAngle = (random.nextDouble() - 0.5) * 90;        double rad = Math.toRadians(slashAngle);
-        
-        // Wind trail particles (randomized positions)
-        for (int i = 0; i < 12; i++) {
+        double slashAngle = (random.nextDouble() - 0.5) * 90;
+        double rad = Math.toRadians(slashAngle);
+                for (int i = 0; i < 12; i++) {
             final int frame = i;
             new BukkitRunnable() {
                 public void run() {
                     double progress = (double) frame / 11.0;
-                    // Random offset for fluid feel
                     float randX = (float)((random.nextDouble() - 0.5) * 0.4);
                     float randY = (float)(random.nextDouble() * 0.5);
                     float randZ = (float)((random.nextDouble() - 0.5) * 0.4);
                     
                     Vector windOffset = new Vector(
-                            Math.cos(rad) * (0.3f + progress * 0.8f) + randX,
-                            progress * 0.6f + randY,
-                            Math.sin(rad) * (0.3f + progress * 0.8f) + randZ
+                            Math.cos(rad) * (0.3f + (float)(progress * 0.8f)) + randX,
+                            (float)(progress * 0.6f) + randY,
+                            Math.sin(rad) * (0.3f + (float)(progress * 0.8f)) + randZ
                     );
                     
                     org.bukkit.Location particleLoc = loc.clone().add(windOffset);
-                    
-                    // Wind color with random tint
                     Color windColor = frame % 3 == 0 ? WIND_CYAN : CRESCENT_SILVER;
                     float size = 1.2f + (float)(random.nextDouble() * 0.5f);
                     
                     world.spawnParticle(Particle.DUST, particleLoc, 1, new Particle.DustOptions(windColor, size));
-                    
-                    // Occasional flame accent
                     if (random.nextInt(4) == 0) {
                         world.spawnParticle(Particle.FLAME, particleLoc, 1, 0.1f, 0.1f, 0.1f, 0);
                     }
@@ -180,21 +172,20 @@ public class SkillListener implements Listener {
             }.runTaskLater(plugin, frame * 2);
         }
         
-        // Impact burst with random spread
         new BukkitRunnable() {
             public void run() {
                 for (int i = 0; i < 20; i++) {
                     final int spark = i;
                     new BukkitRunnable() {
                         public void run() {
-                            // Random 3D spread
                             Vector spread = new Vector(
                                     (float)((random.nextDouble() - 0.5) * 2.5),
                                     (float)(random.nextDouble() * 2.0),
                                     (float)((random.nextDouble() - 0.5) * 2.5)
                             );
                             Color burstColor = random.nextInt(3) == 0 ? GOLD : STAR_SPARKLE;
-                            world.spawnParticle(Particle.DUST, loc.clone().add(spread), 1,                                     new Particle.DustOptions(burstColor, 1.3f + (float)(random.nextDouble() * 0.4f)));
+                            world.spawnParticle(Particle.DUST, loc.clone().add(spread), 1, 
+                                    new Particle.DustOptions(burstColor, 1.3f + (float)(random.nextDouble() * 0.4f)));
                         }
                     }.runTaskLater(plugin, spark);
                 }
@@ -203,8 +194,7 @@ public class SkillListener implements Listener {
     }
 
     // ==========================================
-    // ⚔️ SKILL 1: SERANGAN CAHAYA BULAN (DASH + RANDOM PARTICLES)
-    // ==========================================
+    // ⚔️ SKILL 1: SERANGAN CAHAYA BULAN    // ==========================================
     private void animateMoonlightBeam(final Player p, final LivingEntity target) {
         final org.bukkit.World world = p.getWorld();
         final org.bukkit.Location startLoc = p.getLocation().clone();
@@ -212,49 +202,40 @@ public class SkillListener implements Listener {
         final Vector direction = targetLoc.toVector().subtract(startLoc.toVector()).setY(0).normalize();
         final double distance = startLoc.distance(targetLoc);
 
-        // 🎬 Dash animation: player moves forward with afterimages
         final Vector dashDirection = direction.clone();
         new BukkitRunnable() {
             int dashFrame = 0;
             public void run() {
                 if (dashFrame >= 10) { this.cancel(); return; }
-                
-                // Random dash variation for fluid feel
                 float dashVariation = (float)((random.nextDouble() - 0.5) * 0.15);
                 p.setVelocity(dashDirection.clone().multiply(2.5f + dashVariation).setY(0.3f));
                 
-                // Afterimage trail (random positions)
                 for (int i = 0; i < 3; i++) {
                     float randX = (float)((random.nextDouble() - 0.5) * 0.3);
                     float randY = (float)(random.nextDouble() * 0.4);
                     float randZ = (float)((random.nextDouble() - 0.5) * 0.3);
                     org.bukkit.Location afterimageLoc = p.getLocation().clone().add(randX, randY, randZ);
-                    
                     world.spawnParticle(Particle.DUST, afterimageLoc, 2, 
                             new Particle.DustOptions(CRESCENT_SILVER, 1.6f + (float)(random.nextDouble() * 0.3f)));
                 }
-                
                 dashFrame++;
             }
         }.runTaskTimer(plugin, 0, 1);
 
-        // 🎬 Light beam with randomized particle angles
         new BukkitRunnable() {
             int beamFrame = 0;
             public void run() {
                 if (beamFrame >= 18) {
-                    executeBeamImpact(p, target, targetLoc, world, direction);                    this.cancel(); return;
+                    executeBeamImpact(p, target, targetLoc, world, direction);
+                    this.cancel(); return;
                 }
                 double progress = (double) beamFrame / 17.0;
                 org.bukkit.Location beamLoc = startLoc.clone().add(direction.clone().multiply(progress * distance));
                 
-                // Core beam with random size variation
                 float coreSize = 2.0f + (float)(random.nextDouble() * 0.5f);
                 world.spawnParticle(Particle.DUST, beamLoc, 5, new Particle.DustOptions(MOON_WHITE, coreSize));
                 
-                // Golden aura ring with RANDOM angles (not perfect circle)
                 for (int a = 0; a < 8; a++) {
-                    // Random angle variation for organic feel
                     double angle = (random.nextDouble() * 360) + (beamFrame * 15);
                     double rad = Math.toRadians(angle);
                     float radiusVariation = 0.4f + (float)(random.nextDouble() * 0.2f);
@@ -262,12 +243,10 @@ public class SkillListener implements Listener {
                             Math.cos(rad) * radiusVariation,
                             (float)(random.nextDouble() * 0.15),
                             Math.sin(rad) * radiusVariation
-                    );
-                    world.spawnParticle(Particle.DUST, beamLoc.clone().add(auraOffset), 1, 
+                    );                    world.spawnParticle(Particle.DUST, beamLoc.clone().add(auraOffset), 1, 
                             new Particle.DustOptions(GOLD, 1.5f + (float)(random.nextDouble() * 0.3f)));
                 }
                 
-                // Random sparkle trail
                 if (beamFrame % 2 == 0) {
                     int sparkCount = 3 + random.nextInt(3);
                     for (int s = 0; s < sparkCount; s++) {
@@ -291,19 +270,17 @@ public class SkillListener implements Listener {
     private void executeBeamImpact(final Player p, final LivingEntity target, 
             final org.bukkit.Location impactLoc, final org.bukkit.World world, final Vector direction) {
         
-        // Random impact variation
-        float impactVariation = (float)((random.nextDouble() - 0.5) * 0.2);        
+        final float impactVariation = (float)((random.nextDouble() - 0.5) * 0.2);
+        
         p.playSound(impactLoc, Sound.BLOCK_AMETHYST_BLOCK_HIT, 0.8f + impactVariation, 2.0f);
         p.playSound(impactLoc, Sound.ENTITY_PLAYER_ATTACK_SWEEP, 0.7f, 1.5f);
         world.spawnParticle(Particle.EXPLOSION, impactLoc, 2);
         
-        // Randomized shockwave rings
         for (int ring = 0; ring < 3; ring++) {
             final int r = ring;
             new BukkitRunnable() {
                 public void run() {
                     for (int a = 0; a < 36; a++) {
-                        // Random angle for organic ring
                         double angle = (random.nextDouble() * 360) + (r * 10);
                         double rad = Math.toRadians(angle);
                         float radius = 1.6f + r * 0.9f + (float)(random.nextDouble() * 0.3f);
@@ -315,12 +292,10 @@ public class SkillListener implements Listener {
                         );
                         world.spawnParticle(Particle.DUST, impactLoc.clone().add(ringOffset), 1, 
                                 new Particle.DustOptions(GOLD, 1.6f + (float)(random.nextDouble() * 0.3f)));
-                    }
-                }
+                    }                }
             }.runTaskLater(plugin, r * 3 + random.nextInt(3));
         }
         
-        // Random star sparkle burst (3D spread)
         for (int s = 0; s < 30; s++) {
             final int spark = s;
             new BukkitRunnable() {
@@ -337,11 +312,11 @@ public class SkillListener implements Listener {
             }.runTaskLater(plugin, spark + random.nextInt(5));
         }
         
-        // Random flame burst accent
         for (int f = 0; f < 15; f++) {
             final int flame = f;
             new BukkitRunnable() {
-                public void run() {                    Vector spread = new Vector(
+                public void run() {
+                    Vector spread = new Vector(
                             (float)((random.nextDouble() - 0.5) * 1.8),
                             (float)(random.nextDouble() * 1.5),
                             (float)((random.nextDouble() - 0.5) * 1.8)
@@ -358,7 +333,6 @@ public class SkillListener implements Listener {
         target.damage(4.0, p);
         target.setVelocity(direction.clone().multiply(0.9f).setY(0.6f));
         
-        // Random lingering glow
         new BukkitRunnable() {
             int glowFrame = 0;
             public void run() {
@@ -367,13 +341,12 @@ public class SkillListener implements Listener {
                 world.spawnParticle(Particle.DUST, impactLoc, 4, 
                         new Particle.DustOptions(MOON_WHITE, 1.8f + (float)(pulse * 0.5f)));
                 if (glowFrame % 2 == 0) epicSparkle(impactLoc, GOLD, 2 + random.nextInt(2));
-                glowFrame++;
-            }
+                glowFrame++;            }
         }.runTaskTimer(plugin, 0, 2);
     }
 
     // ==========================================
-    // ✨ SKILL 2: HUJAN BERKAH (TILTED FALLING + RANDOM DOMAIN)
+    // ✨ SKILL 2: HUJAN BERKAH
     // ==========================================
     private void animateBlessingRain(final Player p) {
         final org.bukkit.World world = p.getWorld();
@@ -383,22 +356,21 @@ public class SkillListener implements Listener {
         p.playSound(center, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.6f, 2.1f);
         sendActionBar(p, "§e§l✦ §f☁️ HUJAN BERKAH DITURUNKAN! ☁️");
         
-        // Random moon position variation
-        float moonXVar = (float)((random.nextDouble() - 0.5) * 0.8);
-        float moonZVar = (float)((random.nextDouble() - 0.5) * 0.8);
+        final float moonXVar = (float)((random.nextDouble() - 0.5) * 0.8);
+        final float moonZVar = (float)((random.nextDouble() - 0.5) * 0.8);
         
         new BukkitRunnable() {
             int moonFrame = 0;
             public void run() {
-                if (moonFrame >= 30) { this.cancel(); return; }                org.bukkit.Location moonLoc = center.clone().add(
-                        moonXVar + Math.sin(moonFrame * 0.3) * 0.4,
-                        14 + Math.sin(moonFrame * 0.35) * 0.7,
-                        moonZVar + Math.cos(moonFrame * 0.3) * 0.4
+                if (moonFrame >= 30) { this.cancel(); return; }
+                org.bukkit.Location moonLoc = center.clone().add(
+                        moonXVar + (float)(Math.sin(moonFrame * 0.3) * 0.4),
+                        14 + (float)(Math.sin(moonFrame * 0.35) * 0.7),
+                        moonZVar + (float)(Math.cos(moonFrame * 0.3) * 0.4)
                 );
                 
-                // Crescent with random particle angles
                 for (int a = 0; a < 15; a++) {
-                    double angle = -75 + random.nextDouble() * 150; // Random angle range
+                    double angle = -75 + random.nextDouble() * 150;
                     double rad = Math.toRadians(angle);
                     double radius = 1.6 + Math.sin(moonFrame * 0.4 + random.nextDouble()) * 0.5;
                     float heightVar = (float)(random.nextDouble() * 0.3);
@@ -415,36 +387,30 @@ public class SkillListener implements Listener {
             }
         }.runTaskTimer(plugin, 0, 2);
 
-        // 🎬 TILTED falling orbs (not vertical!)
         for (int orb = 0; orb < 12; orb++) {
             final int o = orb;
             new BukkitRunnable() {
-                public void run() {
-                    // Random start position in larger domain
-                    double angle = random.nextDouble() * Math.PI * 2;
-                    double distance = 1.5 + random.nextDouble() * 4.0; // Bigger domain
-                    // Tilted trajectory: add horizontal drift
-                    float tiltX = (float)((random.nextDouble() - 0.5) * 1.5);
-                    float tiltZ = (float)((random.nextDouble() - 0.5) * 1.5);
+                public void run() {                    double angle = random.nextDouble() * Math.PI * 2;
+                    double distance = 1.5 + random.nextDouble() * 4.0;
+                    final float tiltX = (float)((random.nextDouble() - 0.5) * 1.5);
+                    final float tiltZ = (float)((random.nextDouble() - 0.5) * 1.5);
                     
                     final org.bukkit.Location dropStart = center.clone().add(
                             Math.cos(angle) * distance + tiltX,
-                            20 + random.nextDouble() * 3, // Random height variation
+                            20 + random.nextDouble() * 3,
                             Math.sin(angle) * distance + tiltZ
                     );
                     
-                    // Random horizontal drift during fall
                     final float driftX = (float)((random.nextDouble() - 0.5) * 0.08);
                     final float driftZ = (float)((random.nextDouble() - 0.5) * 0.08);
                     
                     new BukkitRunnable() {
                         int fallFrame = 0;
-                        public void run() {                            if (fallFrame >= 40) {
-                                // Random impact position variation
+                        public void run() {
+                            if (fallFrame >= 40) {
                                 org.bukkit.Location impactLoc = dropStart.clone();
                                 impactLoc.setY(center.getY() + (random.nextDouble() - 0.5) * 0.5);
                                 
-                                // Explosion with random spread
                                 world.spawnParticle(Particle.EXPLOSION, impactLoc, 2 + random.nextInt(2));
                                 world.spawnParticle(Particle.DUST, impactLoc, 35 + random.nextInt(10), 
                                         new Particle.DustOptions(GOLD, 2.0f + (float)(random.nextDouble() * 0.4f)));
@@ -461,34 +427,30 @@ public class SkillListener implements Listener {
                                 world.playSound(impactLoc, Sound.BLOCK_AMETHYST_BLOCK_HIT, 
                                         0.65f + (float)(random.nextDouble() * 0.15f), 1.5f + (float)(random.nextDouble() * 0.3f));
                                 
-                                // Damage in expanded radius
                                 float aoeRadius = 3.5f + (float)(random.nextDouble() * 0.8f);
                                 for (org.bukkit.entity.Entity en : world.getNearbyEntities(impactLoc, aoeRadius, aoeRadius, aoeRadius)) {
                                     if (en instanceof LivingEntity && !en.equals(p)) {
                                         LivingEntity le = (LivingEntity) en;
                                         le.damage(6.0, p);
-                                        // Random knockback direction
                                         Vector kb = new Vector(
                                                 (float)((random.nextDouble() - 0.5) * 0.8),
                                                 0.5f + (float)(random.nextDouble() * 0.3),
                                                 (float)((random.nextDouble() - 0.5) * 0.8)
                                         );
                                         le.setVelocity(kb);
-                                        // Random sparkle sequence
                                         for (int s = 0; s < 10; s++) {
-                                            final int spark = s;
-                                            new BukkitRunnable() { public void run() { 
+                                            final int spark = s;                                            new BukkitRunnable() { public void run() { 
                                                 epicSparkle(le.getLocation().add(0, 1, 0), STAR_SPARKLE, 2 + random.nextInt(2)); 
                                             }}.runTaskLater(plugin, spark + random.nextInt(3));
                                         }
                                     }
                                 }
                                 
-                                // Random lingering aura
                                 new BukkitRunnable() {
                                     int auraFrame = 0;
                                     public void run() {
-                                        if (auraFrame >= 22) { this.cancel(); return; }                                        double radius = 0.7 + auraFrame * 0.2 + random.nextDouble() * 0.15;
+                                        if (auraFrame >= 22) { this.cancel(); return; }
+                                        double radius = 0.7 + auraFrame * 0.2 + random.nextDouble() * 0.15;
                                         for (int a = 0; a < 24; a++) {
                                             double angle = random.nextDouble() * 360 + auraFrame * 5;
                                             double rad = Math.toRadians(angle);
@@ -508,16 +470,13 @@ public class SkillListener implements Listener {
                                 this.cancel(); return;
                             }
                             
-                            // TILTED falling trail with random variation
                             org.bukkit.Location currentLoc = dropStart.clone();
                             currentLoc.setY(dropStart.getY() - fallFrame * 0.5 + (random.nextDouble() - 0.5) * 0.1);
-                            currentLoc.add(driftX * fallFrame, 0, driftZ * fallFrame); // Horizontal drift
+                            currentLoc.add(driftX * fallFrame, 0, driftZ * fallFrame);
                             
-                            // Core orb with random size
                             world.spawnParticle(Particle.DUST, currentLoc, 4, 
                                     new Particle.DustOptions(MOON_WHITE, 1.8f + (float)(random.nextDouble() * 0.4f)));
                             
-                            // Random golden trail particles
                             int trailCount = 4 + random.nextInt(3);
                             for (int t = 0; t < trailCount; t++) {
                                 float trailY = (float)(t * 0.5 + 0.3 + random.nextDouble() * 0.2);
@@ -528,16 +487,14 @@ public class SkillListener implements Listener {
                                         new Particle.DustOptions(GOLD, 1.5f + (float)(random.nextDouble() * 0.3f)));
                             }
                             
-                            // Random sparkle around orb
                             if (fallFrame % 3 == 0) {
-                                int sparkCount = 3 + random.nextInt(3);
-                                for (int s = 0; s < sparkCount; s++) {
+                                int sparkCount = 3 + random.nextInt(3);                                for (int s = 0; s < sparkCount; s++) {
                                     final int spark = s;
                                     new BukkitRunnable() { public void run() { 
                                         epicSparkle(currentLoc, STAR_SPARKLE, 1 + random.nextInt(2)); 
                                     }}.runTaskLater(plugin, spark + random.nextInt(2));
                                 }
-                            }                            // Random flame accent
+                            }
                             if (random.nextInt(5) == 0) {
                                 world.spawnParticle(Particle.FLAME, currentLoc, 2 + random.nextInt(2), 
                                         0.1f + (float)(random.nextDouble() * 0.1f),
@@ -548,17 +505,17 @@ public class SkillListener implements Listener {
                         }
                     }.runTaskTimer(plugin, 0, 1);
                 }
-            }.runTaskLater(plugin, o * 2 + random.nextInt(4)); // Random delay for staggered effect
+            }.runTaskLater(plugin, o * 2 + random.nextInt(4));
         }
     }
 
     // ==========================================
-    // 🌕 SKILL 3: PANGGILAN BULAN (EXPANDED DOMAIN + RANDOM CINEMATIC)
+    // 🌕 SKILL 3: PANGGILAN BULAN
     // ==========================================
     private void animateMoonSummonUltimate(final Player p) {
         final org.bukkit.World world = p.getWorld();
         final org.bukkit.Location center = p.getLocation().clone();
-        final double baseRadius = 6.0; // Bigger domain
+        final double baseRadius = 6.0;
         
         p.setVelocity(new Vector(0, 0.5f, 0));
         p.setInvulnerable(true);
@@ -567,7 +524,6 @@ public class SkillListener implements Listener {
         p.sendTitle("§f§l🌕", "§6§l✦ PANGGILAN BULAN ✦", 6, 28, 9);
         sendActionBar(p, "§6§l🌙 §fBerkah Bulan Suci Diturunkan...");
 
-        // Phase 1: Randomized hexagon arena (organic, not rigid)
         for (int corner = 0; corner < 6; corner++) {
             final int c = corner;
             new BukkitRunnable() {
@@ -576,21 +532,17 @@ public class SkillListener implements Listener {
                     if (frame >= 35) { this.cancel(); return; }
                     double baseAngle = Math.toRadians(c * 60);
                     double progress = Math.min(1.0, (double) frame / 32.0);
-                    // Random radius variation for organic feel
                     double radiusVar = 0.8 + random.nextDouble() * 0.4;
                     double currentRadius = progress * baseRadius * radiusVar;
-                    // Random angle wobble
                     double angleWobble = (random.nextDouble() - 0.5) * 8;
                     double angle = baseAngle + Math.toRadians(frame * 5 + angleWobble);
-                    // Random height variation
                     float heightVar = 0.3f + (float)(progress * 0.8) + (float)(random.nextDouble() * 0.2);
-                    
-                    org.bukkit.Location cornerLoc = center.clone().add(
-                            Math.cos(angle) * currentRadius,                            heightVar,
+                                        org.bukkit.Location cornerLoc = center.clone().add(
+                            Math.cos(angle) * currentRadius,
+                            heightVar,
                             Math.sin(angle) * currentRadius
                     );
                     
-                    // Random particle count and size
                     int particleCount = 2 + random.nextInt(3);
                     float particleSize = 1.8f + (float)(random.nextDouble() * 0.5f);
                     double pulse = Math.sin(frame * 0.4 + random.nextDouble()) * 0.4 + 0.7;
@@ -608,7 +560,6 @@ public class SkillListener implements Listener {
                                 0.15f + (float)(random.nextDouble() * 0.1f), 0);
                     }
                     
-                    // Random connecting lines
                     if (frame % 6 == 0 && frame > 12 && random.nextInt(3) == 0) {
                         int nextC = (c + 1) % 6;
                         double nextAngle = Math.toRadians(nextC * 60) + Math.toRadians(frame * 5);
@@ -624,7 +575,6 @@ public class SkillListener implements Listener {
             }.runTaskTimer(plugin, c * 7 + random.nextInt(5), 2);
         }
 
-        // Phase 2: Rising blade with randomized motion
         new BukkitRunnable() {
             int bladeFrame = 0;
             public void run() {
@@ -632,17 +582,14 @@ public class SkillListener implements Listener {
                     executeMoonCrashImpact(p, center, world, baseRadius);
                     this.cancel(); return;
                 }
-                // Random vertical motion variation
                 double yVariation = Math.sin(bladeFrame * 0.25 + random.nextDouble()) * 0.3;
                 double y = bladeFrame * 0.45 + yVariation;
-                // Random horizontal wobble                float wobbleX = (float)(Math.sin(bladeFrame * 0.3) * 0.4);
-                float wobbleZ = (float)(Math.cos(bladeFrame * 0.3) * 0.4);
+                final float wobbleX = (float)(Math.sin(bladeFrame * 0.3) * 0.4);
+                final float wobbleZ = (float)(Math.cos(bladeFrame * 0.3) * 0.4);
+                                org.bukkit.Location bladeLoc = center.clone().add(wobbleX, y + 10, wobbleZ);
                 
-                org.bukkit.Location bladeLoc = center.clone().add(wobbleX, y + 10, wobbleZ);
-                
-                // Randomized blade arc particles
                 for (int a = 0; a < 14; a++) {
-                    double angle = -55 + random.nextDouble() * 110; // Random angle range
+                    double angle = -55 + random.nextDouble() * 110;
                     double rad = Math.toRadians(angle);
                     double bladeWidth = 1.6 + Math.sin(bladeFrame * 0.3 + random.nextDouble()) * 0.7;
                     float heightVar = (float)(random.nextDouble() * 0.2);
@@ -655,12 +602,10 @@ public class SkillListener implements Listener {
                             new Particle.DustOptions(MOON_WHITE, 2.2f + (float)(random.nextDouble() * 0.5f)));
                 }
                 
-                // Random golden glow pulses
                 if (bladeFrame % 5 == 0 && random.nextInt(2) == 0) {
                     epicAura(bladeLoc, GOLD, 3 + random.nextInt(2));
                 }
                 
-                // Random sparkle rain
                 if (bladeFrame % 3 == 0) {
                     int sparkCount = 5 + random.nextInt(4);
                     for (int s = 0; s < sparkCount; s++) {
@@ -684,24 +629,21 @@ public class SkillListener implements Listener {
     private void executeMoonCrashImpact(final Player p, final org.bukkit.Location center, 
             final org.bukkit.World world, final double baseRadius) {
         
-        // Random impact variation        float impactVar = (float)((random.nextDouble() - 0.5) * 0.3);
+        final float impactVariation = (float)((random.nextDouble() - 0.5) * 0.3);
         
         for (final Player viewer : center.getWorld().getPlayers()) {
             if (viewer.getLocation().distance(center) < baseRadius + 12) {
                 viewer.playSound(viewer.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_HIT, 
-                        0.45f + impactVar, 2.0f + (float)(random.nextDouble() * 0.3f));
-                viewer.playSound(viewer.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 
-                        0.35f, 2.2f + (float)(random.nextDouble() * 0.4f));
+                        0.45f + impactVariation, 2.0f + (float)(random.nextDouble() * 0.3f));
+                viewer.playSound(viewer.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP,                         0.35f, 2.2f + (float)(random.nextDouble() * 0.4f));
             }
         }
         
-        // Randomized light pillars (8-10 pillars, random positions)
         int pillarCount = 8 + random.nextInt(3);
         for (int i = 0; i < pillarCount; i++) {
             final int idx = i;
             new BukkitRunnable() {
                 public void run() {
-                    // Random angle and radius variation
                     double angle = random.nextDouble() * Math.PI * 2;
                     double radiusVar = 0.75 + random.nextDouble() * 0.2;
                     float heightVar = (float)(random.nextDouble() * 0.3);
@@ -715,17 +657,13 @@ public class SkillListener implements Listener {
             }.runTaskLater(plugin, i * 4 + random.nextInt(5));
         }
         
-        // Expanded blessing wave with random motion
         new BukkitRunnable() {
             int waveFrame = 0;
             public void run() {
                 if (waveFrame >= 40) { this.cancel(); return; }
-                
-                // Random expanding ring with variation
                 double ringRadius = baseRadius * 0.4 + waveFrame * 0.22 + random.nextDouble() * 0.15;
                 if (ringRadius <= baseRadius * 1.2) {
                     for (int a = 0; a < 36; a++) {
-                        // Random angle for organic ring
                         double angle = random.nextDouble() * 360 + waveFrame * 4 + random.nextDouble() * 10;
                         double rad = Math.toRadians(angle);
                         float radiusVar = (float)(1.0 + random.nextDouble() * 0.15);
@@ -733,13 +671,12 @@ public class SkillListener implements Listener {
                         org.bukkit.Location ringLoc = center.clone().add(
                                 Math.cos(rad) * ringRadius * radiusVar,
                                 heightVar,
-                                Math.sin(rad) * ringRadius * radiusVar                        );
+                                Math.sin(rad) * ringRadius * radiusVar
+                        );
                         world.spawnParticle(Particle.DUST, ringLoc, 2, 
                                 new Particle.DustOptions(MOON_WHITE, 1.6f + (float)(random.nextDouble() * 0.3f)));
                     }
                 }
-                
-                // Random secondary sparkle ring
                 if (waveFrame % 4 == 0 && random.nextInt(2) == 0) {
                     for (int a = 0; a < 18; a++) {
                         double angle = random.nextDouble() * 360 - waveFrame * 3;
@@ -747,13 +684,10 @@ public class SkillListener implements Listener {
                         org.bukkit.Location sparkLoc = center.clone().add(
                                 Math.cos(rad) * (ringRadius * 0.7),
                                 0.15f + (float)(random.nextDouble() * 0.1f),
-                                Math.sin(rad) * (ringRadius * 0.7)
-                        );
+                                Math.sin(rad) * (ringRadius * 0.7)                        );
                         epicSparkle(sparkLoc, STAR_SPARKLE, 1);
                     }
                 }
-                
-                // Random blessing sparkles in expanded domain
                 if (waveFrame % 5 == 0) {
                     int sparkCount = 6 + random.nextInt(4);
                     for (int s = 0; s < sparkCount; s++) {
@@ -772,7 +706,6 @@ public class SkillListener implements Listener {
             }
         }.runTaskTimer(plugin, 0, 2);
         
-        // AOE damage in expanded radius with falloff
         float aoeRadius = (float)(baseRadius + random.nextDouble() * 1.5);
         for (org.bukkit.entity.Entity en : world.getNearbyEntities(center, aoeRadius, aoeRadius, aoeRadius)) {
             if (en instanceof LivingEntity && !en.equals(p)) {
@@ -780,13 +713,12 @@ public class SkillListener implements Listener {
                 final double dist = le.getLocation().distance(center);
                 final double damage = 8.0 * (1.0 - dist / (aoeRadius * 1.5));
                 le.damage(Math.max(damage, 3.5), p);
-                // Random knockback with upward boost
                 Vector kb = new Vector(
-                        (float)((random.nextDouble() - 0.5) * 1.2),                        0.7f + (float)(random.nextDouble() * 0.3),
+                        (float)((random.nextDouble() - 0.5) * 1.2),
+                        0.7f + (float)(random.nextDouble() * 0.3),
                         (float)((random.nextDouble() - 0.5) * 1.2)
                 );
                 le.setVelocity(kb);
-                // Random hit sparkle sequence
                 new BukkitRunnable() {
                     int hitFrame = 0;
                     public void run() {
@@ -801,10 +733,8 @@ public class SkillListener implements Listener {
                     le.addPotionEffect(new org.bukkit.potion.PotionEffect(
                             org.bukkit.potion.PotionEffectType.REGENERATION, 70, 0, false, false));
                 } catch (Exception ignored) {}
-            }
-        }
+            }        }
         
-        // Self blessing with random variation
         try {
             if (p.getHealth() < p.getAttribute(Attribute.MAX_HEALTH).getValue()) {
                 p.setHealth(Math.min(p.getAttribute(Attribute.MAX_HEALTH).getValue(), 
@@ -816,7 +746,6 @@ public class SkillListener implements Listener {
                     org.bukkit.potion.PotionEffectType.REGENERATION, 140, 0, false, false));
         } catch (Exception ignored) {}
         
-        // Randomized final cinematic flourish
         new BukkitRunnable() {
             int finaleFrame = 0;
             public void run() {
@@ -830,8 +759,8 @@ public class SkillListener implements Listener {
                     }
                     this.cancel(); return;
                 }
-                // Random rising golden particles
-                for (int i = 0; i < 10; i++) {                    double angle = random.nextDouble() * 360 + finaleFrame * 8;
+                for (int i = 0; i < 10; i++) {
+                    double angle = random.nextDouble() * 360 + finaleFrame * 8;
                     float radiusVar = 1.5f + finaleFrame * 0.1f + (float)(random.nextDouble() * 0.3);
                     float heightVar = finaleFrame * 0.2f + (float)(random.nextDouble() * 0.15);
                     Vector offset = new Vector(
@@ -842,7 +771,6 @@ public class SkillListener implements Listener {
                     world.spawnParticle(Particle.DUST, p.getLocation().clone().add(offset), 2, 
                             new Particle.DustOptions(GOLD, 1.7f + (float)(random.nextDouble() * 0.4f)));
                 }
-                // Random sparkle burst
                 if (finaleFrame % 5 == 0) {
                     int sparkCount = 4 + random.nextInt(3);
                     for (int s = 0; s < sparkCount; s++) {
@@ -854,8 +782,7 @@ public class SkillListener implements Listener {
                                     (float)((random.nextDouble() - 0.5) * 2.5)
                             );
                             world.spawnParticle(Particle.DUST, p.getLocation().clone().add(spread), 1, 
-                                    new Particle.DustOptions(STAR_SPARKLE, 1.5f + (float)(random.nextDouble() * 0.4f)));
-                        }}.runTaskLater(plugin, spark + random.nextInt(3));
+                                    new Particle.DustOptions(STAR_SPARKLE, 1.5f + (float)(random.nextDouble() * 0.4f)));                        }}.runTaskLater(plugin, spark + random.nextInt(3));
                     }
                 }
                 finaleFrame++;
@@ -868,24 +795,21 @@ public class SkillListener implements Listener {
             int height = 0;
             public void run() {
                 if (height >= 22) { this.cancel(); return; }
-                // Random horizontal wobble for organic pillar
-                float wobbleX = (float)(Math.sin(height * 0.4 + random.nextDouble()) * 0.25);
-                float wobbleZ = (float)(Math.cos(height * 0.4 + random.nextDouble()) * 0.25);
+                final float wobbleX = (float)(Math.sin(height * 0.4 + random.nextDouble()) * 0.25);
+                final float wobbleZ = (float)(Math.cos(height * 0.4 + random.nextDouble()) * 0.25);
                 org.bukkit.Location pillarLoc = loc.clone().add(wobbleX, height, wobbleZ);
                 
-                // Random particle count and size
                 int particleCount = 2 + random.nextInt(3);
                 float particleSize = 1.6f + (float)(random.nextDouble() * 0.3f);
                 world.spawnParticle(Particle.DUST, pillarLoc, particleCount, 
                         new Particle.DustOptions(color, particleSize));
                 
-                // Random flame core
-                if (height % 3 == 0 && random.nextInt(2) == 0) {                    world.spawnParticle(Particle.FLAME, pillarLoc, 2 + random.nextInt(2), 
+                if (height % 3 == 0 && random.nextInt(2) == 0) {
+                    world.spawnParticle(Particle.FLAME, pillarLoc, 2 + random.nextInt(2), 
                             0.1f + (float)(random.nextDouble() * 0.08f),
                             0.07f + (float)(random.nextDouble() * 0.05f),
                             0.1f + (float)(random.nextDouble() * 0.08f), 0);
                 }
-                // Random sparkle around pillar
                 if (height % 4 == 0) {
                     for (int a = 0; a < 4; a++) {
                         double angle = random.nextDouble() * 360;
@@ -907,9 +831,7 @@ public class SkillListener implements Listener {
         final double dist = from.distance(to);
         if (dist < 0.1) return;
         final Vector step = dir.clone().normalize().multiply(0.3f);
-        for (double i = 0; i < dist; i += 0.3) {
-            // Random offset for organic line
-            float offsetX = (float)((random.nextDouble() - 0.5) * 0.15);
+        for (double i = 0; i < dist; i += 0.3) {            float offsetX = (float)((random.nextDouble() - 0.5) * 0.15);
             float offsetY = (float)(random.nextDouble() * 0.1);
             float offsetZ = (float)((random.nextDouble() - 0.5) * 0.15);
             org.bukkit.Location lineLoc = from.clone().add(step.clone().multiply(i / 0.3));
@@ -920,18 +842,17 @@ public class SkillListener implements Listener {
     }
 
     // ==========================================
-    // 🎨 HELPERS (RANDOMIZED)
+    // 🎨 HELPERS
     // ==========================================
     private void elegantHitEffect(final org.bukkit.Location loc, final org.bukkit.World world) {
-        // Random crit spark count and spread
         int critCount = 4 + random.nextInt(3);
         for (int i = 0; i < critCount; i++) {
             float spreadX = (float)((random.nextDouble() - 0.5) * 0.15);
             float spreadY = (float)(random.nextDouble() * 0.25);
             float spreadZ = (float)((random.nextDouble() - 0.5) * 0.15);
-            world.spawnParticle(Particle.CRIT, loc.clone().add(spreadX, spreadY, spreadZ), 1,                     0.1f, 0.2f, 0.1f, 0);
+            world.spawnParticle(Particle.CRIT, loc.clone().add(spreadX, spreadY, spreadZ), 1, 
+                    0.1f, 0.2f, 0.1f, 0);
         }
-        // Random golden dust
         int dustCount = 3 + random.nextInt(3);
         for (int i = 0; i < dustCount; i++) {
             world.spawnParticle(Particle.DUST, loc, 1, 
@@ -942,7 +863,6 @@ public class SkillListener implements Listener {
     private void epicSparkle(final org.bukkit.Location loc, final Color color, final int count) {
         final org.bukkit.World world = loc.getWorld();
         for (int i = 0; i < count; i++) {
-            // Fully randomized 3D spread
             Vector spread = new Vector(
                     (float)((random.nextDouble() - 0.5) * 0.35),
                     (float)(random.nextDouble() * 0.45),
@@ -960,9 +880,7 @@ public class SkillListener implements Listener {
             new BukkitRunnable() {
                 public void run() {
                     for (int a = 0; a < 24; a++) {
-                        // Random angle for organic aura
-                        double angle = random.nextDouble() * 360;
-                        double rad = Math.toRadians(angle);
+                        double angle = random.nextDouble() * 360;                        double rad = Math.toRadians(angle);
                         float radiusVar = 1.2f + ring * 0.42f + (float)(random.nextDouble() * 0.15f);
                         float heightVar = 0.25f + (float)(random.nextDouble() * 0.1f);
                         Vector offset = new Vector(
@@ -978,6 +896,7 @@ public class SkillListener implements Listener {
             }.runTaskLater(plugin, r * 4 + random.nextInt(3));
         }
     }
+
     private void animateChargeSequence(final Player p) {
         new BukkitRunnable() {
             int pulse = 0;
@@ -985,12 +904,10 @@ public class SkillListener implements Listener {
                 PlayerSkillData data = getData(p);
                 if (!data.isCharging || !p.isOnline()) { this.cancel(); return; }
                 
-                // Random pulse variation for organic feel
                 double pulseVar = Math.sin(pulse * 0.35 + random.nextDouble()) * 0.6;
                 double radius = 1.2 + pulseVar;
                 
                 for (int a = 0; a < 18; a++) {
-                    // Random angle for organic aura
                     double angle = random.nextDouble() * 360;
                     double rad = Math.toRadians(angle);
                     float heightVar = 0.7f + (float)(Math.sin(pulse * 0.2 + random.nextDouble()) * 0.4);
@@ -1003,7 +920,6 @@ public class SkillListener implements Listener {
                             new Particle.DustOptions(GOLD, 1.7f + (float)(random.nextDouble() * 0.3f)));
                 }
                 
-                // Random golden sparkle rain
                 if (pulse % 5 == 0) {
                     int sparkCount = 4 + random.nextInt(3);
                     for (int s = 0; s < sparkCount; s++) {
@@ -1013,21 +929,20 @@ public class SkillListener implements Listener {
                                     (float)((random.nextDouble() - 0.5) * 2.0),
                                     0.5f + (float)(random.nextDouble() * 2.0),
                                     (float)((random.nextDouble() - 0.5) * 2.0)
-                            );
-                            p.getWorld().spawnParticle(Particle.DUST, p.getLocation().clone().add(spread), 1, 
+                            );                            p.getWorld().spawnParticle(Particle.DUST, p.getLocation().clone().add(spread), 1, 
                                     new Particle.DustOptions(STAR_SPARKLE, 1.4f + (float)(random.nextDouble() * 0.3f)));
                         }}.runTaskLater(plugin, spark + random.nextInt(3));
                     }
                 }
                 
-                // Actionbar progress
                 int bars = Math.min(5, pulse / 6);
                 StringBuilder bar = new StringBuilder("§7[§f");
                 for (int i = 0; i < bars; i++) bar.append("▮");
                 for (int i = 0; i < 5 - bars; i++) bar.append("▯");
                 bar.append("]");
                 sendActionBar(p, "§6§l✦ §fBerkah Terkumpul §7" + bar.toString());
-                pulse++;            }
+                pulse++;
+            }
         }.runTaskTimer(plugin, 0, 2);
     }
 
@@ -1063,12 +978,11 @@ public class SkillListener implements Listener {
         long lastHitTime = 0;
         long lastHitStart = 0;
         boolean skill1Used = false;
-        boolean skill2Cooldown = false;
-        boolean skill3Cooldown = false;
+        boolean skill2Cooldown = false;        boolean skill3Cooldown = false;
         boolean isCharging = false;
         boolean moonStepReady = true;
         int lunarGauge = 0;
         long chargeStart = 0;
         void addGauge(final int amount) { lunarGauge = Math.min(MAX_LUNAR_GAUGE, lunarGauge + amount); }
     }
-}
+                                                    }
