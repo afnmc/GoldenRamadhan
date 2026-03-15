@@ -4,7 +4,6 @@ import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Color;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.World;
@@ -134,7 +133,8 @@ public class SkillListener implements Listener {
                 public void run() {
                     if(f>15) { cancel(); return; }
                     float pr = (float)f/15f;
-                    Location cl = l.clone().add(dir.clone().multiply(4f*pr)).setY(l.getY()+(float)(Math.sin(pr*Math.PI)*2));
+                    Location cl = l.clone().add(dir.clone().multiply(4f*pr));
+                    cl.setY(l.getY()+(float)(Math.sin(pr*Math.PI)*2));
                     p.teleport(cl);
                     for(double a=-1.8;a<=1.8;a+=0.12) {
                         Vector arc = rotate(dir,90).multiply(a*0.8).add(dir.clone().multiply((float)(-a*a*0.35)));
@@ -143,7 +143,7 @@ public class SkillListener implements Listener {
                     for(Entity en:w.getNearbyEntities(cl,2.5,2.5,2.5)) {
                         if(en instanceof LivingEntity && !en.equals(p)) {                            
                             ((LivingEntity)en).damage(4,p);
-                            ((LivingEntity)en).addPotionEffect(new PotionEffect(PotionEffectType.SLOW,40,1,false,false));
+                            ((LivingEntity)en).addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS,40,1,false,false));
                         }
                     }
                     if(f%3==0) w.playSound(cl,Sound.BLOCK_AMETHYST_BLOCK_CHIME,0.4f,1.2f+f*0.05f);
@@ -515,4 +515,3 @@ public class SkillListener implements Listener {
         long s1=0,s2=0,s3=0;
     }
 }
-
