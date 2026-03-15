@@ -53,7 +53,7 @@ public class SkillListener implements Listener {
     }
     
     @EventHandler public void onI(PlayerInteractEvent e) {
-        Player p = e.getPlayer();
+        final Player p = e.getPlayer();
         if (!hasSword(p)) return;
         PD d = get(p);
         long n = System.currentTimeMillis();
@@ -105,10 +105,10 @@ public class SkillListener implements Listener {
         }
     }
     
-    private void skill1(Player p,int t) {
-        World w = p.getWorld();
-        Location l = p.getLocation();
-        Vector dir = l.getDirection().setY(0).normalize();
+    private void skill1(final Player p, int t) {
+        final World w = p.getWorld();
+        final Location l = p.getLocation();
+        final Vector dir = l.getDirection().setY(0).normalize();
         
         if (t==0) { 
             p.sendTitle("§f§l✦ SHADOW STEP ✦","§7Teleport & Strike",2,15,5);
@@ -189,10 +189,10 @@ public class SkillListener implements Listener {
         }
     }
     
-    private void skill2(Player p,int t) {
-        World w = p.getWorld();
-        Location st = p.getEyeLocation().add(p.getLocation().getDirection());
-        Vector dir = p.getLocation().getDirection().normalize();
+    private void skill2(final Player p, int t) {
+        final World w = p.getWorld();
+        final Location st = p.getEyeLocation().add(p.getLocation().getDirection());
+        final Vector dir = p.getLocation().getDirection().normalize();
         
         if (t==0) { 
             p.sendTitle("§f§l✦ VOID SPEAR ✦","§7Piercing Projectile",2,15,5);
@@ -215,9 +215,10 @@ public class SkillListener implements Listener {
         }
         else if (t==1) { 
             p.sendTitle("§b§l✦ EMERALD SCYTHE ✦","§aSpinning + Chain",2,15,5);
+            // Using array to bypass effectively final restriction for hit entity
+            final LivingEntity[] hitContainer = {null};
             new BukkitRunnable() {
                 int lf=0;
-                LivingEntity hit = null;
                 public void run() {
                     if(lf>40) { cancel(); return; }
                     Location cur = st.clone().add(dir.clone().multiply(lf*0.9f));
@@ -225,13 +226,13 @@ public class SkillListener implements Listener {
                         Vector blade = new Vector((float)(Math.cos(a)*0.9),(float)(Math.sin(lf*0.3)*0.4),(float)(Math.sin(a)*0.9));
                         w.spawnParticle(Particle.DUST,cur.clone().add(rotate(blade,90)),1,new Particle.DustOptions(CRESC_C,1.4f));
                     }
-                    if(hit==null) {
-                        for(Entity en:w.getNearbyEntities(cur,2,2,2)) {
+                    if(hitContainer[0] == null) {
+                        for(Entity en : w.getNearbyEntities(cur,2,2,2)) {
                             if(en instanceof LivingEntity && !en.equals(p)) {
-                                hit=(LivingEntity)en;
-                                ((LivingEntity)en).damage(8,p);
-                                mark((LivingEntity)en);
-                                chain((LivingEntity)en,p,w);
+                                hitContainer[0] = (LivingEntity)en;
+                                hitContainer[0].damage(8,p);
+                                mark(hitContainer[0]);
+                                chain(hitContainer[0],p,w);
                             }
                         }
                     }
@@ -285,20 +286,21 @@ public class SkillListener implements Listener {
         }
     }
     
-    private void chain(LivingEntity from,Player src,World w) {
+    private void chain(final LivingEntity from, final Player src, final World w) {
         LivingEntity nr=null; double md=6;
-        for(Entity en:from.getWorld().getNearbyEntities(from.getLocation(),6,4,6)) {
+        for(Entity en : from.getWorld().getNearbyEntities(from.getLocation(),6,4,6)) {
             if(en instanceof LivingEntity && !en.equals(src) && en!=from) {                
                 double d=en.getLocation().distance(from.getLocation());
                 if(d<md) { md=d; nr=(LivingEntity)en; }
             }
         }
         if(nr!=null) {
-            Vector cd = nr.getLocation().toVector().subtract(from.getLocation().toVector()).normalize();
+            final LivingEntity targetNr = nr;
+            final Vector cd = targetNr.getLocation().toVector().subtract(from.getLocation().toVector()).normalize();
             new BukkitRunnable() {
                 int cf=0;
                 public void run() {
-                    if(cf>10) { nr.damage(5,src); cancel(); return; }
+                    if(cf>10) { targetNr.damage(5,src); cancel(); return; }
                     float pr = (float)cf/10f;
                     for(int i=0;i<10;i++) {
                         Location cl = from.getLocation().clone().add(cd.clone().multiply((float)(i*0.5f*pr)));
@@ -310,9 +312,9 @@ public class SkillListener implements Listener {
         }
     }
     
-    private void skill3(Player p,int t) {
-        World w = p.getWorld();
-        Location c = p.getLocation();
+    private void skill3(final Player p, int t) {
+        final World w = p.getWorld();
+        final Location c = p.getLocation();
         
         if (t==0) { 
             p.sendTitle("§f§l✦ MOON BURST ✦","§7AOE Explosion",3,25,8);
@@ -373,7 +375,7 @@ public class SkillListener implements Listener {
             p.sendTitle("§6§l✦ CELESTIAL ANNIHILATION ✦","§eDivine Punishment",4,30,10);
             w.playSound(c,Sound.BLOCK_BEACON_ACTIVATE,1.6f,0.7f);
             w.playSound(c,Sound.ENTITY_WITHER_SPAWN,0.9f,0.8f);
-            List<LivingEntity> tg = new ArrayList<>();
+            final List<LivingEntity> tg = new ArrayList<>();
             for(Entity en:w.getNearbyEntities(c,12,7,12)) {
                 if(en instanceof LivingEntity && !en.equals(p)) tg.add((LivingEntity)en);
             }
@@ -415,7 +417,7 @@ public class SkillListener implements Listener {
                         cancel(); return;
                     }
                     if(bf<tg.size() && !tg.isEmpty()) {
-                        LivingEntity target = tg.get(bf%tg.size());
+                        final LivingEntity target = tg.get(bf % tg.size());
                         new BukkitRunnable() {
                             int beam=0;
                             public void run() {
@@ -440,7 +442,7 @@ public class SkillListener implements Listener {
         return "Skill";
     }
     
-    private void showCD(Player p,String skill,long ms) {
+    private void showCD(final Player p, final String skill, long ms) {
         final long[] s = {ms/1000};
         new BukkitRunnable() {
             public void run() {
@@ -451,7 +453,7 @@ public class SkillListener implements Listener {
         }.runTaskTimer(plugin,0,20);
     }
     
-    private void mark(LivingEntity t) {
+    private void mark(final LivingEntity t) {
         marked.put(t.getUniqueId(),System.currentTimeMillis()+7000);
         new BukkitRunnable() {
             int tm=0;
