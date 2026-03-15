@@ -28,106 +28,176 @@ public class SkillListener implements Listener {
         PlayerData d = get(p);
         long now = System.currentTimeMillis();
 
+        // SKILL 1: (SNEAK + LEFT CLICK)
         if (p.isSneaking() && (e.getAction() == Action.LEFT_CLICK_AIR || e.getAction() == Action.LEFT_CLICK_BLOCK)) {
-            if (now - d.lastDash < 4000) return;
-            castRpgDash(p);
-            d.lastDash = now;
-        } else if (e.getAction() == Action.LEFT_CLICK_AIR || e.getAction() == Action.LEFT_CLICK_BLOCK) {
-            if (now - d.lastSlash < 2000) return;
-            castRpgCrescent(p);
-            d.lastSlash = now;
-        } else if (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            if (now - d.lastUlt < 25000) return;
-            castRpgUltimate(p);
-            d.lastUlt = now;
+            if (now - d.lastSkill1 < 3000) return;
+            executeSkill1(p);
+            d.lastSkill1 = now;
+        } 
+        // SKILL 2: (LEFT CLICK)
+        else if (e.getAction() == Action.LEFT_CLICK_AIR || e.getAction() == Action.LEFT_CLICK_BLOCK) {
+            if (now - d.lastSkill2 < 2000) return;
+            executeSkill2(p);
+            d.lastSkill2 = now;
+        }
+        // SKILL 3: ULTIMATE (RIGHT CLICK)
+        else if (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            if (now - d.lastSkill3 < 25000) return;
+            executeSkill3(p);
+            d.lastSkill3 = now;
         }
     }
 
-    // =====================================================
-    // ⚡ SKILL 1: THUNDER STRIKE
-    // =====================================================
-    private void castRpgDash(Player p) {
-        int tier = getArmorTier(p);
-        World w = p.getWorld();
-        Vector dir = p.getLocation().getDirection().setY(0).normalize();
-
-        if (tier == 2) {
-            p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 10, 5, false, false));
-            p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1f, 0.5f);
-            
-            new BukkitRunnable() {
-                int slashes = 0;
-                public void run() {
-                    if (slashes >= 4) { cancel(); return; }
-                    
-                    Collection<Entity> targets = w.getNearbyEntities(p.getLocation(), 8, 4, 8);
-                    LivingEntity target = null;
-                    for (Entity en : targets) {
-                        if (en instanceof LivingEntity && !en.equals(p)) {
-                            target = (LivingEntity) en;
-                            break; 
-                        }
-                    }
-                    
-                    if (target != null) {
-                        p.teleport(target.getLocation().add(dir.clone().multiply(-1)));
-                        target.damage(6.0, p);
-                        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 20, 10));
-                        w.spawnParticle(Particle.ENCHANTED_HIT, target.getLocation().add(0, 1, 0), 20, 0.5, 0.5, 0.5, 0.1);
-                        w.spawnParticle(Particle.FLASH, target.getLocation(), 1);
-                        w.playSound(target.getLocation(), Sound.ITEM_TRIDENT_THUNDER, 0.8f, 1.5f);
-                    } else {
-                        p.setVelocity(dir.multiply(2));
-                    }
-                    slashes++;
-                }
-            }.runTaskTimer(plugin, 0, 3);
-        } else {
-            p.setVelocity(dir.multiply(tier == 1 ? 2.0 : 1.2));
-            w.playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1f, 1f);
+    // SKILL 4: ELITE FLY (SNEAK + JUMP)
+    @EventHandler
+    public void onToggleFlight(PlayerToggleFlightEvent e) {
+        Player p = e.getPlayer();
+        if (getArmorTier(p) == 2 && p.isSneaking()) {
+            e.setCancelled(true);
+            p.setFlying(false);
+            if (!p.getAllowFlight()) activateEliteFlight(p);
         }
     }
 
-    // =====================================================
-    // 🌙 SKILL 2: VERDANT STORM
-    // =====================================================
-    private void castRpgCrescent(Player p) {
+    // ==========================================
+    // ⚡ SKILL 1: UTILITY/MOBILITY
+    // ==========================================
+    private void executeSkill1(Player p) {
         int tier = getArmorTier(p);
         World w = p.getWorld();
 
-        if (tier == 2) {
-            p.sendTitle("", "§a§oVerdant Storm!", 5, 20, 5);
-            
+        if (tier == 2) { // ELITE: "Lunar Mirror" (Teleport + Clone Visual)
+            Location oldLoc = p.getLocation();
+            Location newLoc = p.getLocation().add(p.getLocation().getDirection().multiply(7));
+            p.teleport(newLoc);
+            // Animasi bayangan di lokasi lama
+            w.spawnParticle(Particle.WHITE_SMOKE, oldLoc, 20, 0.2, 1, 0.2, 0.05);
+            w.playSound(newLoc, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1.2f);
+            w.spawnParticle(Particle.FLASH, newLoc, 1);
+        } else if (tier == 1) { // CRESCENT: "Wind Rush" (Dash dorongan angin)
+            p.setVelocity(p.getLocation().getDirection().multiply(2.0).setY(0.2));
+            w.playSound(p.getLocation(), Sound.ENTITY_HORSE_BREATH, 1f, 1.5f);
+        } else { // NO ARMOR: "Small Hop" (Lompatan kecil)
+            p.setVelocity(new Vector(0, 0.5, 0));
+        }
+    }
+
+    // ==========================================
+    // 🌙 SKILL 2: OFFENSIVE/ATTACK
+    // ==========================================
+    private void executeSkill2(Player p) {
+        int tier = getArmorTier(p);
+        World w = p.getWorld();
+
+        if (tier == 2) { // ELITE: "Golden Moon Eruption" (Ledakan pilar cahaya dari tanah)
+            Location targetLoc = p.getLocation().add(p.getLocation().getDirection().multiply(5));
             new BukkitRunnable() {
-                int ticks = 0;
+                int i = 0;
                 public void run() {
-                    if (ticks > 60) { cancel(); return; }
-                    
-                    for (int i = 0; i < 3; i++) {
-                        double angle = Math.toRadians((ticks * 20) + (i * 120));
-                        Location orbit = p.getLocation().add(Math.cos(angle) * 3, 1, Math.sin(angle) * 3);
-                        w.spawnParticle(Particle.SWEEP_ATTACK, orbit, 1);
-                        w.spawnParticle(Particle.DUST, orbit, 3, new Particle.DustOptions(Color.LIME, 1.5f));
-                        
-                        for (Entity en : w.getNearbyEntities(orbit, 1.5, 1.5, 1.5)) {
-                            if (en instanceof LivingEntity && !en.equals(p)) {
-                                LivingEntity le = (LivingEntity) en;
-                                le.damage(3.0, p);
-                                Vector kb = le.getLocation().toVector().subtract(p.getLocation().toVector()).normalize().multiply(0.5).setY(0.3);
-                                le.setVelocity(kb);
-                                w.playSound(le.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, 0.5f, 1f);
-                            }
+                    if (i > 10) { cancel(); return; }
+                    w.spawnParticle(Particle.DUST, targetLoc.clone().add(0, i * 0.5, 0), 10, new Particle.DustOptions(Color.YELLOW, 2f));
+                    if (i == 5) {
+                        w.playSound(targetLoc, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 1f, 2f);
+                        for (Entity en : w.getNearbyEntities(targetLoc, 3, 3, 3)) {
+                            if (en instanceof LivingEntity le && !en.equals(p)) le.damage(8, p);
                         }
                     }
-                    ticks++;
+                    i++;
                 }
             }.runTaskTimer(plugin, 0, 1);
-        } else {
-            launchBasicCrescent(p, tier);
+        } else if (tier == 1) { // CRESCENT: "Moon Slice" (Proyektil sabit horizontal)
+            spawnSlice(p, Color.WHITE);
+        } else { // NO ARMOR: "Basic Stab" (Hanya partikel crit depan)
+            w.spawnParticle(Particle.CRIT, p.getLocation().add(p.getLocation().getDirection().multiply(2)), 10);
         }
     }
 
-    private void launchBasicCrescent(Player p, int tier) {
+    // ==========================================
+    // 🌕 SKILL 3: ULTIMATE
+    // ==========================================
+    private void executeSkill3(Player p) {
+        int tier = getArmorTier(p);
+        World w = p.getWorld();
+
+        if (tier == 2) { // ELITE: "Cataclysmic Descent" (Terbang sangat tinggi & Slam raksasa)
+            p.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 60, 5));
+            p.sendTitle("§6§lGOLDEN MOON", "§fGathering Cosmic Energy...", 10, 40, 10);
+            
+            new BukkitRunnable() {
+                int t = 0;
+                public void run() {
+                    if (t > 60) {
+                        p.removePotionEffect(PotionEffectType.LEVITATION);
+                        p.setVelocity(new Vector(0, -6, 0));
+                        checkSlam(p);
+                        cancel();
+                        return;
+                    }
+                    w.spawnParticle(Particle.END_ROD, p.getLocation(), 5, 0.5, 0.5, 0.5, 0.05);
+                    t++;
+                }
+            }.runTaskTimer(plugin, 0, 1);
+        } else if (tier == 1) { // CRESCENT: "Lunar Burst" (Ledakan energi sekitar)
+            w.spawnParticle(Particle.EXPLOSION_EMITTER, p.getLocation(), 1);
+            w.playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
+            for (Entity en : w.getNearbyEntities(p.getLocation(), 5, 5, 5)) {
+                if (en instanceof LivingEntity le && !en.equals(p)) le.damage(10, p);
+            }
+        } else { // NO ARMOR: "Adrenaline" (Efek Speed & Strength)
+            p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 200, 1));
+            p.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 1f);
+        }
+    }
+
+    // ==========================================
+    // ☁️ SKILL 4: ELITE FLIGHT (FLY 30S)
+    // ==========================================
+    private void activateEliteFlight(Player p) {
+        p.setAllowFlight(true);
+        p.setFlying(true);
+        p.sendTitle("§e§lSKY MODE", "§fTerbang aktif selama 30 detik", 10, 20, 10);
+
+        new BukkitRunnable() {
+            int seconds = 0;
+            public void run() {
+                if (seconds >= 600 || !p.isOnline() || getArmorTier(p) < 2) {
+                    p.setFlying(false);
+                    p.setAllowFlight(false);
+                    p.sendMessage("§cMode Fly berakhir.");
+                    cancel();
+                    return;
+                }
+                // Partikel Awan Putih-Kuning
+                Location l = p.getLocation();
+                p.getWorld().spawnParticle(Particle.CLOUD, l, 2, 0.2, 0.1, 0.2, 0.02);
+                p.getWorld().spawnParticle(Particle.DUST, l, 3, new Particle.DustOptions(Color.YELLOW, 1f));
+                seconds += 5;
+            }
+        }.runTaskTimer(plugin, 0, 5);
+    }
+
+    // --- Helpers ---
+    private void checkSlam(Player p) {
+        new BukkitRunnable() {
+            public void run() {
+                if (p.isOnGround()) {
+                    World w = p.getWorld();
+                    Location l = p.getLocation();
+                    w.spawnParticle(Particle.EXPLOSION_EMITTER, l, 3);
+                    w.playSound(l, Sound.ENTITY_GENERIC_EXPLODE, 2f, 0.5f);
+                    for (Entity en : w.getNearbyEntities(l, 8, 4, 8)) {
+                        if (en instanceof LivingEntity le && !en.equals(p)) {
+                            le.damage(18, p);
+                            le.setVelocity(le.getLocation().toVector().subtract(l.toVector()).normalize().multiply(2).setY(1));
+                        }
+                    }
+                    cancel();
+                }
+            }
+        }.runTaskTimer(plugin, 1, 1);
+    }
+
+    private void spawnSlice(Player p, Color col) {
         Vector dir = p.getLocation().getDirection().multiply(1.5);
         Location loc = p.getEyeLocation();
         new BukkitRunnable() {
@@ -135,85 +205,18 @@ public class SkillListener implements Listener {
             public void run() {
                 if (i > 15) { cancel(); return; }
                 loc.add(dir);
-                p.getWorld().spawnParticle(Particle.DUST, loc, 5, new Particle.DustOptions(tier == 1 ? Color.GREEN : Color.WHITE, 1.5f));
-                for (Entity en : p.getWorld().getNearbyEntities(loc, 1, 1, 1)) {
-                    if (en instanceof LivingEntity && !en.equals(p)) ((LivingEntity) en).damage(5.0, p);
+                p.getWorld().spawnParticle(Particle.DUST, loc, 8, new Particle.DustOptions(col, 1.5f));
+                for (Entity en : p.getWorld().getNearbyEntities(loc, 1.5, 1.5, 1.5)) {
+                    if (en instanceof LivingEntity le && !en.equals(p)) {
+                        le.damage(6, p);
+                        i = 20;
+                    }
                 }
                 i++;
             }
         }.runTaskTimer(plugin, 0, 1);
     }
 
-    // =====================================================
-    // 🌕 SKILL 3: LUNAR CATACLYSM
-    // =====================================================
-    private void castRpgUltimate(Player p) {
-        int tier = getArmorTier(p);
-        World w = p.getWorld();
-        Location center = p.getLocation();
-
-        if (tier < 2) {
-            p.sendMessage("§eUltimate casted!");
-            return;
-        }
-
-        p.sendTitle("§6§lLUNAR CATACLYSM", "§7Menghancurkan area...", 10, 40, 10);
-        w.playSound(center, Sound.ENTITY_ENDER_DRAGON_GROWL, 1.0f, 0.5f);
-        
-        List<LivingEntity> caughtEnemies = new ArrayList<>();
-        for (Entity en : w.getNearbyEntities(center, 8, 5, 8)) {
-            if (en instanceof LivingEntity && !en.equals(p)) {
-                LivingEntity le = (LivingEntity) en;
-                le.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 30, 2));
-                le.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 60, 1));
-                caughtEnemies.add(le);
-            }
-        }
-
-        new BukkitRunnable() {
-            int t = 0;
-            public void run() {
-                if (t > 20) {
-                    executeUltimateSlam(p, center, caughtEnemies);
-                    cancel();
-                    return;
-                }
-                for (int i = 0; i < 360; i += 30) {
-                    double angle = Math.toRadians(i + t * 10);
-                    Location part = center.clone().add(Math.cos(angle) * 5, t * 0.2, Math.sin(angle) * 5);
-                    w.spawnParticle(Particle.DUST, part, 2, new Particle.DustOptions(Color.YELLOW, 2f));
-                }
-                t++;
-            }
-        }.runTaskTimer(plugin, 0, 1);
-    }
-
-    private void executeUltimateSlam(Player p, Location center, List<LivingEntity> enemies) {
-        World w = p.getWorld();
-        w.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 2.0f, 0.1f);
-        w.playSound(center, Sound.ENTITY_WARDEN_SONIC_BOOM, 1.5f, 0.8f);
-        
-        for (Entity en : w.getNearbyEntities(center, 15, 15, 15)) {
-            if (en instanceof Player targetPlayer) {
-                targetPlayer.playSound(targetPlayer.getLocation(), Sound.ENTITY_MINECART_RIDING, 1f, 0.5f);
-                targetPlayer.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 60, 1));
-            }
-        }
-
-        w.spawnParticle(Particle.EXPLOSION_EMITTER, center, 3);
-        w.spawnParticle(Particle.LAVA, center, 50, 2, 0.5, 2, 0.1);
-
-        for (LivingEntity le : enemies) {
-            le.removePotionEffect(PotionEffectType.LEVITATION);
-            le.setVelocity(new Vector(0, -2.5, 0));
-            le.damage(15.0, p);
-            w.spawnParticle(Particle.BLOCK, le.getLocation(), 30, 0.5, 0.5, 0.5, Bukkit.createBlockData(Material.DIRT));
-        }
-    }
-
-    // =====================================================
-    // 🛠️ UTILS
-    // =====================================================
     private int getArmorTier(Player p) {
         if (plugin.getArmorManager().hasFullEliteSet(p)) return 2;
         if (plugin.getArmorManager().hasCrescentSet(p)) return 1;
@@ -226,6 +229,6 @@ public class SkillListener implements Listener {
     }
 
     private PlayerData get(Player p) { return data.computeIfAbsent(p.getUniqueId(), k -> new PlayerData()); }
-    private static class PlayerData { long lastSlash = 0, lastDash = 0, lastUlt = 0; }
+    private static class PlayerData { long lastSkill1 = 0, lastSkill2 = 0, lastSkill3 = 0; }
 }
 
