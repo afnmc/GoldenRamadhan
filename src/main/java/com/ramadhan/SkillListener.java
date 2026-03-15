@@ -217,7 +217,7 @@ public class SkillListener implements Listener {
             p.sendTitle("§b§l✦ EMERALD SCYTHE ✦","§aSpinning + Chain",2,15,5);
             new BukkitRunnable() {
                 int lf=0;
-                LivingEntity hit=null;
+                LivingEntity hit = null;
                 public void run() {
                     if(lf>40) { cancel(); return; }
                     Location cur = st.clone().add(dir.clone().multiply(lf*0.9f));
@@ -515,3 +515,4 @@ public class SkillListener implements Listener {
         long s1=0,s2=0,s3=0;
     }
 }
+
