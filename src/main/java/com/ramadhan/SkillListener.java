@@ -9,6 +9,7 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -99,7 +100,7 @@ public class SkillListener implements Listener {
             p.setAllowFlight(true);            p.setFlying(true);
             Location cl = p.getLocation().clone().add(0,-0.5,0);
             spawnCloud(cl,p.getWorld());
-            p.playSound(cl,Sound.BLOCK_CLOUD_SPAWN,1f,1.2f);
+            p.playSound(cl,Sound.BLOCK_BEEHIVE_EXIT,1f,1.2f); // Diganti dari BLOCK_CLOUD_SPAWN
             showCD(p,"Fly",99999);
         } else {
             flying.put(p.getUniqueId(),false);
@@ -181,8 +182,9 @@ public class SkillListener implements Listener {
             for (int dz=-3;dz<=3;dz++) {
                 if (Math.abs(dx)+Math.abs(dz)<=4) {
                     Location bl = gl.clone().add(dx,0,dz);
-                    w.spawnParticle(Particle.BLOCK_CRACK,bl.add(0.5,0.5,0.5),4,0.25f,0.25f,0.25f,0,Material.STONE.createBlockData());
-                    w.spawnParticle(Particle.BLOCK_CRACK,bl.add(0.5,0.5,0.5),3,0.2f,0.2f,0.2f,0,Material.COBBLESTONE.createBlockData());
+                    // Diganti dari PARTICLE.BLOCK_CRACK ke BLOCK_CRACK_DATA (Spigot terbaru)
+                    w.spawnParticle(Particle.BLOCK,bl.add(0.5,0.5,0.5),4,0.25f,0.25f,0.25f,0,Material.STONE.createBlockData());
+                    w.spawnParticle(Particle.BLOCK,bl.add(0.5,0.5,0.5),3,0.2f,0.2f,0.2f,0,Material.COBBLESTONE.createBlockData());
                 }
             }
         }
@@ -235,7 +237,7 @@ public class SkillListener implements Listener {
         if (!(e.getDamager() instanceof Player)) return;
         Player p = (Player)e.getDamager();
         int t = tier(p);
-        if (t==2 && hasPiece(p,EquipmentSlot.HEAD,GoldenMoon.ELITE_HELMET_KEY) && p.getHealth() < p.getAttribute(Attribute.MAX_HEALTH).getValue()*0.7) {
+        if (t==2 && hasPiece(p,EquipmentSlot.HEAD,GoldenMoon.ELITE_HELMET_KEY) && p.getHealth() < p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()*0.7) { // Attribute fix
             e.setDamage(e.getDamage()*1.2); spark(e.getEntity().getLocation(),p.getWorld(),ELITE_A,5);
         }        
         if (t>=1 && hasPiece(p,EquipmentSlot.CHEST,GoldenMoon.ARMOR_CHEST_KEY) && e.getEntity() instanceof LivingEntity && !e.getEntity().equals(p)) {
@@ -572,7 +574,7 @@ public class SkillListener implements Listener {
                     spark(en.getLocation(),w,NONE_C,8);
                 }
             }
-            if (p.getHealth()<p.getAttribute(Attribute.MAX_HEALTH).getValue()) p.setHealth(Math.min(p.getAttribute(Attribute.MAX_HEALTH).getValue(),p.getHealth()+5));
+            if (p.getHealth()<p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()) p.setHealth(Math.min(p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue(),p.getHealth()+5));
             showCD(p,"Ultimate",12000);
         }
         else if (t==1) {
@@ -678,7 +680,7 @@ public class SkillListener implements Listener {
                                 }
                             }.runTaskTimer(plugin,0,2);
                         }
-                        if (p.getHealth()<p.getAttribute(Attribute.MAX_HEALTH).getValue()) p.setHealth(Math.min(p.getAttribute(Attribute.MAX_HEALTH).getValue(),p.getHealth()+12));
+                        if (p.getHealth()<p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()) p.setHealth(Math.min(p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue(),p.getHealth()+12));
                         p.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH,300,1,false,false));
                         p.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION,400,2,false,false));
                         p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION,200,1,false,false));
@@ -772,4 +774,3 @@ public class SkillListener implements Listener {
     
     private static class PD { long ls=0,ld=0,lu=0; }
 }
-
