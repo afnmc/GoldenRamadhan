@@ -292,7 +292,8 @@ public class SkillListener implements Listener {
             }.runTaskTimer(plugin,0,1);
             showCD(p,"Dash",1500);
         }
-        else if (t==1) { // CRESCENT: Multi-slash arc            new BukkitRunnable() {
+        else if (t==1) { // CRESCENT: Multi-slash arc            
+            new BukkitRunnable() {
                 int f=0;
                 public void run() {
                     if (f>15) { cancel(); return; }
