@@ -177,9 +177,9 @@ public class SkillListener implements Listener {
                         public void run() {
                             if (ringFrame > 14) { cancel(); return; }
                             
-                            float progress = (float) ringFrame / 14f;
-                            float ringRadius = 0.6f + progress * 2.0f;
-                            float alpha = 1.0f - progress;
+                            final float progress = (float) ringFrame / 14f;
+                            final float ringRadius = 0.6f + progress * 2.0f;
+                            final float alpha = 1.0f - progress;
                             
                             // Expanding electric rings
                             for (int i = 0; i < 16; i++) {
@@ -240,7 +240,7 @@ public class SkillListener implements Listener {
                 }
                 
                 // Charge up visuals
-                float chargeProgress = (float) chargeFrame / 5f;
+                final float chargeProgress = (float) chargeFrame / 5f;
                 for (int i = 0; i < 8 + armorTier * 3; i++) {
                     double angle = Math.toRadians(i * 45 + chargeFrame * 20);
                     Vector chargeOffset = new Vector(                            (float)(Math.cos(angle) * (0.5 + chargeProgress)),
@@ -313,13 +313,13 @@ public class SkillListener implements Listener {
                         // 🎬 RETURN ANIMATION (Smooth fade out)
                         // ==========================================
                         if (armorTier >= 1 && life <= range / speed + 15) {
-                            float returnProgress = (float) (life - range/speed) / 15f;
+                            final float returnProgress = (float) (life - range/speed) / 15f;
                             for (int i = 0; i < 5; i++) {
                                 Vector returnOffset = projDir.clone().multiply(-0.4f * returnProgress);
                                 Location leafLoc = start.clone().add(returnOffset);
                                 leafLoc.add(0, (float)(Math.sin(returnProgress * Math.PI) * 0.5), 0);
                                 
-                                float alpha = 1.0f - returnProgress;
+                                final float alpha = 1.0f - returnProgress;
                                 w.spawnParticle(Particle.DUST, leafLoc, 1, new Particle.DustOptions(CRESCENT_SECONDARY, 1.1f * alpha));
                                 w.spawnParticle(Particle.DUST, leafLoc.clone().add(0, 0.15f, 0), 1, new Particle.DustOptions(CRESCENT_ACCENT, 0.9f * alpha));
                             }
@@ -426,18 +426,18 @@ public class SkillListener implements Listener {
         int layers = armorTier + 1;
         
         // Pulse effect
-        float pulse = 1.0f + (float)(Math.sin(life * 0.5) * 0.15);
+        final float pulse = 1.0f + (float)(Math.sin(life * 0.5) * 0.15);
         
         Vector forward = direction.clone().normalize();
         Vector right = rotate(forward, 90).normalize();
         
         for (int layer = 0; layer < layers; layer++) {
-            float layerOffset = layer * 0.14f;
-            float size = (baseSize - layer * 0.2f) * pulse;
+            final float layerOffset = layer * 0.14f;
+            final float size = (baseSize - layer * 0.2f) * pulse;
             
             for (double angle = -2.6; angle <= 2.6; angle += 0.13) {
-                double taper = 1.0 - Math.abs(angle) / 3.0;
-                double curve = (angle * angle) * 0.45;
+                final double taper = 1.0 - Math.abs(angle) / 3.0;
+                final double curve = (angle * angle) * 0.45;
                 Vector arcOffset = right.clone().multiply((float)(angle * 1.35 * taper)).add(forward.clone().multiply((float)-curve));
                 Vector layerVec = new Vector(0, (float)(layerOffset * Math.sin(angle)), 0);                
                 Location particleLoc = center.clone().add(arcOffset).add(layerVec);
@@ -451,7 +451,7 @@ public class SkillListener implements Listener {
         
         if (armorTier == 2) {
             for (double angle = -2.9; angle <= 2.9; angle += 0.4) {
-                double curve = (angle * angle) * 0.52;
+                final double curve = (angle * angle) * 0.52;
                 Vector glowOffset = right.clone().multiply((float)(angle * 1.6)).add(forward.clone().multiply((float)-curve));
                 w.spawnParticle(Particle.DUST, center.clone().add(glowOffset), 1, new Particle.DustOptions(CRESCENT_ACCENT, 1.25f * pulse));
             }
@@ -464,8 +464,8 @@ public class SkillListener implements Listener {
             public void run() {
                 if (duration > 50) { cancel(); return; }
                 
-                float progress = (float) duration / 50f;
-                float radius = 1.5f + (float)(Math.sin(duration * 0.15) * 0.4);
+                final float progress = (float) duration / 50f;
+                final float radius = 1.5f + (float)(Math.sin(duration * 0.15) * 0.4);
                 
                 // Spiral pattern zone
                 for (int i = 0; i < 12; i++) {
@@ -523,7 +523,7 @@ public class SkillListener implements Listener {
                         return;
                     }
                     
-                    float progress = (float) chainFrame / 12f;
+                    final float progress = (float) chainFrame / 12f;
                     for (int i = 0; i < 18; i++) {
                         Location chainLoc = from.getLocation().clone().add(chainDir.clone().multiply((float)(i * 0.35 * progress)));
                         chainLoc.add(0, (float)(Math.sin(i * 0.5 + chainFrame * 0.4) * 0.25 * progress), 0);
@@ -569,16 +569,16 @@ public class SkillListener implements Listener {
         // ==========================================
         // 🎬 PHASE 1: ARENA EXPANSION (0-28 ticks) - Smooth growth
         // ==========================================
-        double arenaRadius = zoneRadius * 0.85;
+        final double arenaRadius = zoneRadius * 0.85;
         new BukkitRunnable() {
             int t = 0;
             public void run() {
                 if (t > 28) { cancel(); return; }
                 
-                float progress = (float) t / 28f;
-                float easeProgress = (float) (1 - Math.pow(1 - progress, 3)); // Ease-out cubic
-                float currentRadius = (float) (arenaRadius * easeProgress);
-                float alpha = 0.5f + easeProgress * 0.5f;
+                final float progress = (float) t / 28f;
+                final float easeProgress = (float) (1 - Math.pow(1 - progress, 3)); // Ease-out cubic
+                final float currentRadius = (float) (arenaRadius * easeProgress);
+                final float alpha = 0.5f + easeProgress * 0.5f;
                 
                 // Main golden ring with rotation
                 for (int i = 0; i < 50; i++) {
@@ -602,7 +602,7 @@ public class SkillListener implements Listener {
                     for (int corner = 0; corner < 8; corner++) {
                         double angle = Math.toRadians(corner * 45 + t * 2.5);
                         Vector cornerOffset = new Vector((float)(Math.cos(angle) * currentRadius), 0.45f, (float)(Math.sin(angle) * currentRadius));
-                        float cornerPulse = 1.0f + (float)(Math.sin(t * 0.4) * 0.2);
+                        final float cornerPulse = 1.0f + (float)(Math.sin(t * 0.4) * 0.2);
                         w.spawnParticle(Particle.DUST, center.clone().add(cornerOffset), 6, new Particle.DustOptions(ULT_ACCENT, 2.3f * cornerPulse));
                         w.spawnParticle(Particle.DUST, center.clone().add(cornerOffset), 4, new Particle.DustOptions(ULT_PRIMARY, 1.9f * cornerPulse));
                     }
@@ -624,8 +624,8 @@ public class SkillListener implements Listener {
             public void run() {
                 if (liftFrame > 22) { cancel(); return; }
                 
-                float liftProgress = (float) liftFrame / 22f;
-                float easeLift = (float) (1 - Math.pow(1 - liftProgress, 2)); // Ease-out quadratic
+                final float liftProgress = (float) liftFrame / 22f;
+                final float easeLift = (float) (1 - Math.pow(1 - liftProgress, 2)); // Ease-out quadratic
                 
                 // Ascend player with golden trail
                 if (liftFrame < 17) {
@@ -647,8 +647,8 @@ public class SkillListener implements Listener {
                 // Spawn golden moons with corona animation
                 for (int m = 0; m < moonCount; m++) {
                     double baseAngle = Math.toRadians(m * (360.0 / moonCount) + liftFrame * 6);
-                    float moonHeight = 3.8f + easeLift * 3.5f;
-                    float moonRadius = (float) (arenaRadius * 0.7 * (0.8 + Math.sin(liftFrame * 0.3 + m) * 0.2));
+                    final float moonHeight = 3.8f + easeLift * 3.5f;
+                    final float moonRadius = (float) (arenaRadius * 0.7 * (0.8 + Math.sin(liftFrame * 0.3 + m) * 0.2));
                     
                     Location moonCenter = center.clone().add(
                             (float)(Math.cos(baseAngle) * moonRadius),
@@ -687,8 +687,8 @@ public class SkillListener implements Listener {
                     cancel();                    return;
                 }
                 
-                float progress = (float) pinchFrame / 32f;
-                float easePinch = (float) (1 - Math.pow(1 - progress, 4)); // Ease-out quartic for dramatic slowdown
+                final float progress = (float) pinchFrame / 32f;
+                final float easePinch = (float) (1 - Math.pow(1 - progress, 4)); // Ease-out quartic for dramatic slowdown
                 
                 for (int m = 0; m < moonCount; m++) {
                     Location targetLoc = center;
@@ -697,8 +697,8 @@ public class SkillListener implements Listener {
                     }
                     
                     double baseAngle = Math.toRadians(m * (360.0 / moonCount));
-                    float currentRadius = (float) (arenaRadius * 0.7 * (1.0 - easePinch * 0.92));
-                    float height = 4.8f + (float) (Math.sin(pinchFrame * 0.28) * 0.7);
+                    final float currentRadius = (float) (arenaRadius * 0.7 * (1.0 - easePinch * 0.92));
+                    final float height = 4.8f + (float) (Math.sin(pinchFrame * 0.28) * 0.7);
                     
                     Location moonLoc = center.clone().add(
                             (float)(Math.cos(baseAngle) * currentRadius),
@@ -725,8 +725,8 @@ public class SkillListener implements Listener {
                 
                 // Arena pulse waves
                 if (pinchFrame % 6 == 0) {
-                    float pulseProgress = (float) ((pinchFrame % 6) / 6f);
-                    float pulseRadius = (float) (arenaRadius * 0.5 * (1.0 - easePinch * 0.6));
+                    final float pulseProgress = (float) ((pinchFrame % 6) / 6f);
+                    final float pulseRadius = (float) (arenaRadius * 0.5 * (1.0 - easePinch * 0.6));
                     for (int i = 0; i < 40; i++) {
                         double angle = Math.toRadians(i * 9 + pinchFrame * 7);
                         Vector pulseOffset = new Vector((float)(Math.cos(angle) * pulseRadius), 0.15f, (float)(Math.sin(angle) * pulseRadius));
@@ -743,18 +743,18 @@ public class SkillListener implements Listener {
         float baseSize = armorTier == 2 ? 2.1f : (armorTier == 1 ? 1.8f : 1.5f);
         int layers = armorTier + 1;
         
-        float pulse = 1.0f + (float)(Math.sin(life * 0.4) * 0.18);
-        float rotation = (float) (life * 0.05);
+        final float pulse = 1.0f + (float)(Math.sin(life * 0.4) * 0.18);
+        final float rotation = (float) (life * 0.05);
         
         Vector forward = new Vector((float)Math.cos(Math.toRadians(facingAngleDeg)), 0, (float)Math.sin(Math.toRadians(facingAngleDeg)));
         Vector right = rotate(forward, 90).normalize();
         
         for (int layer = 0; layer < layers; layer++) {
-            float layerOffset = layer * 0.17f;
-            float size = (baseSize - layer * 0.24f) * pulse;
+            final float layerOffset = layer * 0.17f;
+            final float size = (baseSize - layer * 0.24f) * pulse;
             
             for (double angle = -2.7; angle <= 2.7; angle += 0.11) {
-                double curve = (angle * angle) * 0.58;
+                final double curve = (angle * angle) * 0.58;
                 Vector arcOffset = right.clone().multiply((float)(angle * 1.45)).add(forward.clone().multiply((float)-curve));
                 Vector layerVec = new Vector(0, (float)(layerOffset * Math.sin(angle + rotation)), 0);
                 
@@ -769,7 +769,7 @@ public class SkillListener implements Listener {
         
         if (armorTier == 2) {
             for (double angle = -3.1; angle <= 3.1; angle += 0.38) {
-                double curve = (angle * angle) * 0.65;
+                final double curve = (angle * angle) * 0.65;
                 Vector coronaOffset = right.clone().multiply((float)(angle * 1.7)).add(forward.clone().multiply((float)-curve));
                 w.spawnParticle(Particle.DUST, center.clone().add(coronaOffset), 1, new Particle.DustOptions(ULT_SECONDARY, 1.3f * pulse));
             }
@@ -827,8 +827,8 @@ public class SkillListener implements Listener {
             public void run() {
                 if (finaleFrame > 35) { cancel(); return; }
                 
-                float finaleProgress = (float) finaleFrame / 35f;
-                float easeFinale = (float) (1 - Math.pow(1 - finaleProgress, 2));
+                final float finaleProgress = (float) finaleFrame / 35f;
+                final float easeFinale = (float) (1 - Math.pow(1 - finaleProgress, 2));
                 
                 for (int i = 0; i < 16 + armorTier * 6; i++) {
                     double angle = Math.toRadians(i * (360.0 / (16 + armorTier * 6)) + finaleFrame * 11);                    Vector offset = new Vector(
@@ -881,7 +881,7 @@ public class SkillListener implements Listener {
                     moonMarked.remove(target.getUniqueId());
                     cancel(); return;
                 }                Location head = target.getLocation().add(0, 2.8f, 0);
-                float pulse = 1.0f + (float)(Math.sin(time * 0.3) * 0.2);
+                final float pulse = 1.0f + (float)(Math.sin(time * 0.3) * 0.2);
                 target.getWorld().spawnParticle(Particle.DUST, head, 5, new Particle.DustOptions(ULT_PRIMARY, 1.8f * pulse));
                 time += 2;
             }
@@ -944,4 +944,4 @@ public class SkillListener implements Listener {
     private static class PlayerData {
         long lastSlash = 0, lastDash = 0, lastUlt = 0;
     }
-                        }
+                }
