@@ -28,19 +28,16 @@ public class SkillListener implements Listener {
         PlayerData d = get(p);
         long now = System.currentTimeMillis();
 
-        // SKILL 1: (SNEAK + LEFT CLICK)
         if (p.isSneaking() && (e.getAction() == Action.LEFT_CLICK_AIR || e.getAction() == Action.LEFT_CLICK_BLOCK)) {
             if (now - d.lastSkill1 < 3000) return;
             executeSkill1(p);
             d.lastSkill1 = now;
         } 
-        // SKILL 2: (LEFT CLICK)
         else if (e.getAction() == Action.LEFT_CLICK_AIR || e.getAction() == Action.LEFT_CLICK_BLOCK) {
             if (now - d.lastSkill2 < 2000) return;
             executeSkill2(p);
             d.lastSkill2 = now;
         }
-        // SKILL 3: ULTIMATE (RIGHT CLICK)
         else if (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) {
             if (now - d.lastSkill3 < 25000) return;
             executeSkill3(p);
@@ -48,7 +45,6 @@ public class SkillListener implements Listener {
         }
     }
 
-    // SKILL 4: ELITE FLY (SNEAK + JUMP)
     @EventHandler
     public void onToggleFlight(PlayerToggleFlightEvent e) {
         Player p = e.getPlayer();
@@ -59,37 +55,31 @@ public class SkillListener implements Listener {
         }
     }
 
-    // ==========================================
-    // ⚡ SKILL 1: UTILITY/MOBILITY
-    // ==========================================
     private void executeSkill1(Player p) {
         int tier = getArmorTier(p);
         World w = p.getWorld();
 
-        if (tier == 2) { // ELITE: "Lunar Mirror" (Teleport + Clone Visual)
+        if (tier == 2) {
             Location oldLoc = p.getLocation();
             Location newLoc = p.getLocation().add(p.getLocation().getDirection().multiply(7));
             p.teleport(newLoc);
-            // Animasi bayangan di lokasi lama
             w.spawnParticle(Particle.WHITE_SMOKE, oldLoc, 20, 0.2, 1, 0.2, 0.05);
             w.playSound(newLoc, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1.2f);
             w.spawnParticle(Particle.FLASH, newLoc, 1);
-        } else if (tier == 1) { // CRESCENT: "Wind Rush" (Dash dorongan angin)
+        } else if (tier == 1) {
             p.setVelocity(p.getLocation().getDirection().multiply(2.0).setY(0.2));
-            w.playSound(p.getLocation(), Sound.ENTITY_HORSE_BREATH, 1f, 1.5f);
-        } else { // NO ARMOR: "Small Hop" (Lompatan kecil)
+            // FIXED LINE BELOW:
+            w.playSound(p.getLocation(), Sound.ENTITY_PHANTOM_FLAP, 1f, 1.5f);
+        } else {
             p.setVelocity(new Vector(0, 0.5, 0));
         }
     }
 
-    // ==========================================
-    // 🌙 SKILL 2: OFFENSIVE/ATTACK
-    // ==========================================
     private void executeSkill2(Player p) {
         int tier = getArmorTier(p);
         World w = p.getWorld();
 
-        if (tier == 2) { // ELITE: "Golden Moon Eruption" (Ledakan pilar cahaya dari tanah)
+        if (tier == 2) {
             Location targetLoc = p.getLocation().add(p.getLocation().getDirection().multiply(5));
             new BukkitRunnable() {
                 int i = 0;
@@ -105,21 +95,18 @@ public class SkillListener implements Listener {
                     i++;
                 }
             }.runTaskTimer(plugin, 0, 1);
-        } else if (tier == 1) { // CRESCENT: "Moon Slice" (Proyektil sabit horizontal)
+        } else if (tier == 1) {
             spawnSlice(p, Color.WHITE);
-        } else { // NO ARMOR: "Basic Stab" (Hanya partikel crit depan)
+        } else {
             w.spawnParticle(Particle.CRIT, p.getLocation().add(p.getLocation().getDirection().multiply(2)), 10);
         }
     }
 
-    // ==========================================
-    // 🌕 SKILL 3: ULTIMATE
-    // ==========================================
     private void executeSkill3(Player p) {
         int tier = getArmorTier(p);
         World w = p.getWorld();
 
-        if (tier == 2) { // ELITE: "Cataclysmic Descent" (Terbang sangat tinggi & Slam raksasa)
+        if (tier == 2) {
             p.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 60, 5));
             p.sendTitle("§6§lGOLDEN MOON", "§fGathering Cosmic Energy...", 10, 40, 10);
             
@@ -137,46 +124,41 @@ public class SkillListener implements Listener {
                     t++;
                 }
             }.runTaskTimer(plugin, 0, 1);
-        } else if (tier == 1) { // CRESCENT: "Lunar Burst" (Ledakan energi sekitar)
+        } else if (tier == 1) {
             w.spawnParticle(Particle.EXPLOSION_EMITTER, p.getLocation(), 1);
             w.playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
             for (Entity en : w.getNearbyEntities(p.getLocation(), 5, 5, 5)) {
                 if (en instanceof LivingEntity le && !en.equals(p)) le.damage(10, p);
             }
-        } else { // NO ARMOR: "Adrenaline" (Efek Speed & Strength)
+        } else {
             p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 200, 1));
             p.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 1f);
         }
     }
 
-    // ==========================================
-    // ☁️ SKILL 4: ELITE FLIGHT (FLY 30S)
-    // ==========================================
     private void activateEliteFlight(Player p) {
         p.setAllowFlight(true);
         p.setFlying(true);
         p.sendTitle("§e§lSKY MODE", "§fTerbang aktif selama 30 detik", 10, 20, 10);
 
         new BukkitRunnable() {
-            int seconds = 0;
+            int ticks = 0;
             public void run() {
-                if (seconds >= 600 || !p.isOnline() || getArmorTier(p) < 2) {
+                if (ticks >= 600 || !p.isOnline() || getArmorTier(p) < 2) {
                     p.setFlying(false);
                     p.setAllowFlight(false);
                     p.sendMessage("§cMode Fly berakhir.");
                     cancel();
                     return;
                 }
-                // Partikel Awan Putih-Kuning
                 Location l = p.getLocation();
                 p.getWorld().spawnParticle(Particle.CLOUD, l, 2, 0.2, 0.1, 0.2, 0.02);
                 p.getWorld().spawnParticle(Particle.DUST, l, 3, new Particle.DustOptions(Color.YELLOW, 1f));
-                seconds += 5;
+                ticks += 5;
             }
         }.runTaskTimer(plugin, 0, 5);
     }
 
-    // --- Helpers ---
     private void checkSlam(Player p) {
         new BukkitRunnable() {
             public void run() {
@@ -231,4 +213,3 @@ public class SkillListener implements Listener {
     private PlayerData get(Player p) { return data.computeIfAbsent(p.getUniqueId(), k -> new PlayerData()); }
     private static class PlayerData { long lastSkill1 = 0, lastSkill2 = 0, lastSkill3 = 0; }
 }
-
