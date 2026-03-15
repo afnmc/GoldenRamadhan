@@ -44,7 +44,7 @@ public class SkillListener implements Listener {
     }
 
     // =====================================================
-    // ⚡ SKILL 1: THUNDER STRIKE (STUN & IMPACT)
+    // ⚡ SKILL 1: THUNDER STRIKE
     // =====================================================
     private void castRpgDash(Player p) {
         int tier = getArmorTier(p);
@@ -52,8 +52,7 @@ public class SkillListener implements Listener {
         Vector dir = p.getLocation().getDirection().setY(0).normalize();
 
         if (tier == 2) {
-            // ELITE: "THUNDER FLASH" - Layar bergetar (FOV berubah) & Musuh ke-Stun
-            p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 10, 5, false, false)); // Efek FOV tarik
+            p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 10, 5, false, false));
             p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1f, 0.5f);
             
             new BukkitRunnable() {
@@ -61,17 +60,20 @@ public class SkillListener implements Listener {
                 public void run() {
                     if (slashes >= 4) { cancel(); return; }
                     
-                    List<Entity> targets = p.getNearbyEntities(8, 4, 8).stream()
-                            .filter(en -> en instanceof LivingEntity && !en.equals(p)).toList();
+                    Collection<Entity> targets = w.getNearbyEntities(p.getLocation(), 8, 4, 8);
+                    LivingEntity target = null;
+                    for (Entity en : targets) {
+                        if (en instanceof LivingEntity && !en.equals(p)) {
+                            target = (LivingEntity) en;
+                            break; 
+                        }
+                    }
                     
-                    if (!targets.isEmpty()) {
-                        LivingEntity target = (LivingEntity) targets.get(r.nextInt(targets.size()));
-                        p.teleport(target.getLocation().add(dir.clone().multiply(-1))); // Teleport ke belakang musuh
-                        
-                        // RPG IMPACT: Hitstop & Stun (Slowness level tinggi)
+                    if (target != null) {
+                        p.teleport(target.getLocation().add(dir.clone().multiply(-1)));
                         target.damage(6.0, p);
-                        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 20, 10)); // Stun
-                        w.spawnParticle(Particle.CRIT_MAGIC, target.getLocation().add(0, 1, 0), 20, 0.5, 0.5, 0.5, 0.1);
+                        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 20, 10));
+                        w.spawnParticle(Particle.ENCHANTED_HIT, target.getLocation().add(0, 1, 0), 20, 0.5, 0.5, 0.5, 0.1);
                         w.spawnParticle(Particle.FLASH, target.getLocation(), 1);
                         w.playSound(target.getLocation(), Sound.ITEM_TRIDENT_THUNDER, 0.8f, 1.5f);
                     } else {
@@ -87,14 +89,13 @@ public class SkillListener implements Listener {
     }
 
     // =====================================================
-    // 🌙 SKILL 2: VERDANT STORM (KNOCKBACK & BLEED)
+    // 🌙 SKILL 2: VERDANT STORM
     // =====================================================
     private void castRpgCrescent(Player p) {
         int tier = getArmorTier(p);
         World w = p.getWorld();
 
         if (tier == 2) {
-            // ELITE: "ORBITAL STORM" - Sabit berputar, musuh terpental
             p.sendTitle("", "§a§oVerdant Storm!", 5, 20, 5);
             
             new BukkitRunnable() {
@@ -108,42 +109,43 @@ public class SkillListener implements Listener {
                         w.spawnParticle(Particle.SWEEP_ATTACK, orbit, 1);
                         w.spawnParticle(Particle.DUST, orbit, 3, new Particle.DustOptions(Color.LIME, 1.5f));
                         
-                        orbit.getNearbyEntities(1.5, 1.5, 1.5).forEach(en -> {
+                        for (Entity en : w.getNearbyEntities(orbit, 1.5, 1.5, 1.5)) {
                             if (en instanceof LivingEntity && !en.equals(p)) {
                                 LivingEntity le = (LivingEntity) en;
                                 le.damage(3.0, p);
-                                
-                                // RPG IMPACT: Knockback menjauh dari pemain
-                                Vector knockback = le.getLocation().toVector().subtract(p.getLocation().toVector()).normalize().multiply(0.5).setY(0.3);
-                                le.setVelocity(knockback);
+                                Vector kb = le.getLocation().toVector().subtract(p.getLocation().toVector()).normalize().multiply(0.5).setY(0.3);
+                                le.setVelocity(kb);
                                 w.playSound(le.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, 0.5f, 1f);
                             }
-                        });
+                        }
                     }
                     ticks++;
                 }
             }.runTaskTimer(plugin, 0, 1);
         } else {
-            // Proyektil biasa
-            Vector dir = p.getLocation().getDirection().multiply(1.5);
-            Location loc = p.getEyeLocation();
-            new BukkitRunnable() {
-                int i = 0;
-                public void run() {
-                    if (i > 15) { cancel(); return; }
-                    loc.add(dir);
-                    w.spawnParticle(Particle.DUST, loc, 5, new Particle.DustOptions(tier == 1 ? Color.GREEN : Color.WHITE, 1.5f));
-                    loc.getNearbyEntities(1, 1, 1).forEach(en -> {
-                        if (en instanceof LivingEntity && !en.equals(p)) ((LivingEntity) en).damage(5.0, p);
-                    });
-                    i++;
-                }
-            }.runTaskTimer(plugin, 0, 1);
+            launchBasicCrescent(p, tier);
         }
     }
 
+    private void launchBasicCrescent(Player p, int tier) {
+        Vector dir = p.getLocation().getDirection().multiply(1.5);
+        Location loc = p.getEyeLocation();
+        new BukkitRunnable() {
+            int i = 0;
+            public void run() {
+                if (i > 15) { cancel(); return; }
+                loc.add(dir);
+                p.getWorld().spawnParticle(Particle.DUST, loc, 5, new Particle.DustOptions(tier == 1 ? Color.GREEN : Color.WHITE, 1.5f));
+                for (Entity en : p.getWorld().getNearbyEntities(loc, 1, 1, 1)) {
+                    if (en instanceof LivingEntity && !en.equals(p)) ((LivingEntity) en).damage(5.0, p);
+                }
+                i++;
+            }
+        }.runTaskTimer(plugin, 0, 1);
+    }
+
     // =====================================================
-    // 🌕 SKILL 3: LUNAR CATACLYSM (ANTI-GRAVITY & EARTHQUAKE)
+    // 🌕 SKILL 3: LUNAR CATACLYSM
     // =====================================================
     private void castRpgUltimate(Player p) {
         int tier = getArmorTier(p);
@@ -152,25 +154,22 @@ public class SkillListener implements Listener {
 
         if (tier < 2) {
             p.sendMessage("§eUltimate casted!");
-            return; // Logic standar untuk non-elite (bisa diisi ledakan biasa)
+            return;
         }
 
-        // ELITE: THE RPG BOSS MOVE
         p.sendTitle("§6§lLUNAR CATACLYSM", "§7Menghancurkan area...", 10, 40, 10);
-        w.playSound(center, Sound.ENTITY_ENDER_DRAGON_GROWL, 1.0f, 0.5f); // Suara boss marah
+        w.playSound(center, Sound.ENTITY_ENDER_DRAGON_GROWL, 1.0f, 0.5f);
         
-        // PHASE 1: ANTI-GRAVITY (Mengangkat semua musuh ke udara)
         List<LivingEntity> caughtEnemies = new ArrayList<>();
-        p.getNearbyEntities(8, 5, 8).forEach(en -> {
+        for (Entity en : w.getNearbyEntities(center, 8, 5, 8)) {
             if (en instanceof LivingEntity && !en.equals(p)) {
                 LivingEntity le = (LivingEntity) en;
-                le.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 30, 2)); // Terbang
-                le.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 60, 1)); // Mark musuh
+                le.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 30, 2));
+                le.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 60, 1));
                 caughtEnemies.add(le);
             }
-        });
+        }
 
-        // Efek angin puyuh menarik ke atas
         new BukkitRunnable() {
             int t = 0;
             public void run() {
@@ -191,25 +190,22 @@ public class SkillListener implements Listener {
 
     private void executeUltimateSlam(Player p, Location center, List<LivingEntity> enemies) {
         World w = p.getWorld();
-        
-        // PHASE 2: EARTHQUAKE SLAM (Bantingan kejut)
-        w.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 2.0f, 0.1f); // Ledakan bass paling berat
+        w.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 2.0f, 0.1f);
         w.playSound(center, Sound.ENTITY_WARDEN_SONIC_BOOM, 1.5f, 0.8f);
         
-        // Getaran Kamera (Screen Shake) ke semua pemain di dekatnya
-        center.getNearbyPlayers(15).forEach(targetPlayer -> {
-            targetPlayer.playSound(targetPlayer.getLocation(), Sound.ENTITY_MINECART_RIDING, 1f, 0.5f);
-            targetPlayer.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 60, 1));
-        });
+        for (Entity en : w.getNearbyEntities(center, 15, 15, 15)) {
+            if (en instanceof Player targetPlayer) {
+                targetPlayer.playSound(targetPlayer.getLocation(), Sound.ENTITY_MINECART_RIDING, 1f, 0.5f);
+                targetPlayer.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 60, 1));
+            }
+        }
 
-        // Partikel ledakan raksasa
         w.spawnParticle(Particle.EXPLOSION_EMITTER, center, 3);
         w.spawnParticle(Particle.LAVA, center, 50, 2, 0.5, 2, 0.1);
 
-        // Banting musuh dari udara ke tanah dengan damage masif
         for (LivingEntity le : enemies) {
             le.removePotionEffect(PotionEffectType.LEVITATION);
-            le.setVelocity(new Vector(0, -2.5, 0)); // Banting ke bawah
+            le.setVelocity(new Vector(0, -2.5, 0));
             le.damage(15.0, p);
             w.spawnParticle(Particle.BLOCK, le.getLocation(), 30, 0.5, 0.5, 0.5, Bukkit.createBlockData(Material.DIRT));
         }
