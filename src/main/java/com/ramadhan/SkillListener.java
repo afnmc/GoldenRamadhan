@@ -522,11 +522,12 @@ public class SkillListener implements Listener {
             }
         }
         if (nr!=null) {
-            Vector cd = nr.getLocation().toVector().subtract(from.getLocation().toVector()).normalize();
+            final LivingEntity finalNr = nr;
+            Vector cd = finalNr.getLocation().toVector().subtract(from.getLocation().toVector()).normalize();
             new BukkitRunnable() {
                 int cf=0;
                 public void run() {
-                    if (cf>10) { nr.damage(4,src); spark(nr.getLocation(),w,CRESC_C,5); cancel(); return; }
+                    if (cf>10) { finalNr.damage(4,src); spark(finalNr.getLocation(),w,CRESC_C,5); cancel(); return; }
                     final float pr = (float)cf/10f;
                     for (int i=0;i<12;i++) {
                         Location cl = from.getLocation().clone().add(cd.clone().multiply((float)(i*0.4f*pr)));
@@ -774,3 +775,4 @@ public class SkillListener implements Listener {
     
     private static class PD { long ls=0,ld=0,lu=0; }
 }
+
