@@ -164,7 +164,7 @@ public class SkillListener implements Listener {
                     w.playSound(targetLoc, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.6f, 2.2f);
                     
                     for (int i = 0; i < 30 + armorTier * 12; i++) {
-                        Vector spread = new Vector((r.nextDouble()-0.5)*1.3, r.nextDouble()*1.1, (r.nextDouble()-0.5)*1.3);
+                        Vector spread = new Vector((float)((r.nextDouble()-0.5)*1.3), (float)(r.nextDouble()*1.1), (float)((r.nextDouble()-0.5)*1.3));
                         Color impactColor = i % 5 == 0 ? DASH_ACCENT : (i % 5 == 1 ? DASH_CORE : (i % 5 == 2 ? DASH_PRIMARY : (i % 5 == 3 ? DASH_SECONDARY : DASH_ACCENT)));
                         w.spawnParticle(Particle.DUST, targetLoc.clone().add(spread), 1, new Particle.DustOptions(impactColor, 1.6f + armorTier * 0.3f));
                     }
@@ -184,17 +184,17 @@ public class SkillListener implements Listener {
                             // Expanding electric rings
                             for (int i = 0; i < 16; i++) {
                                 double angle = Math.toRadians(i * 22.5 + ringFrame * 12);
-                                Vector ringOffset = new Vector(Math.cos(angle) * ringRadius, 0.12, Math.sin(angle) * ringRadius);
+                                Vector ringOffset = new Vector((float)(Math.cos(angle) * ringRadius), 0.12f, (float)(Math.sin(angle) * ringRadius));
                                 Color ringColor = ringFrame % 3 == 0 ? DASH_PRIMARY : (ringFrame % 3 == 1 ? DASH_SECONDARY : DASH_CORE);
                                 w.spawnParticle(Particle.DUST, targetLoc.clone().add(ringOffset), 1, new Particle.DustOptions(ringColor, 1.3f * alpha));
                             }
                             
                             // Elite: Lightning strikes
                             if (armorTier == 2 && ringFrame % 4 == 0) {
-                                w.spawnParticle(Particle.FLASH, targetLoc.clone().add(0, 2.5, 0), 1);
+                                w.spawnParticle(Particle.FLASH, targetLoc.clone().add(0, 2.5f, 0), 1);
                                 w.playSound(targetLoc, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.35f, 2.0f + ringFrame * 0.12f);
                                 for (int bolt = 0; bolt < 3; bolt++) {
-                                    double boltAngle = Math.toRadians(bolt * 120 + ringFrame * 15);                                    Vector boltOffset = new Vector(Math.cos(boltAngle) * 1.8, 0, Math.sin(boltAngle) * 1.8);
+                                    double boltAngle = Math.toRadians(bolt * 120 + ringFrame * 15);                                    Vector boltOffset = new Vector((float)(Math.cos(boltAngle) * 1.8), 0, (float)(Math.sin(boltAngle) * 1.8));
                                     w.spawnParticle(Particle.DUST, targetLoc.clone().add(boltOffset), 2, new Particle.DustOptions(DASH_ACCENT, 1.8f));
                                 }
                             }
@@ -211,7 +211,7 @@ public class SkillListener implements Listener {
                                 LivingEntity le = (LivingEntity) en;
                                 le.damage(4.5, p);
                                 applyMoonMark(le);
-                                le.setVelocity(dir.clone().multiply(0.55).setY(0.45));
+                                le.setVelocity(dir.clone().multiply(0.55f).setY(0.45f));
                                 spawnSparkle(le.getLocation().add(0, 1, 0), w, DASH_PRIMARY, 10);
                             }
                         }
@@ -228,7 +228,7 @@ public class SkillListener implements Listener {
                                 sab(p, "§b⚡ §fThunder Step Reset!");
                                 w.playSound(targetLoc, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.0f, 2.4f);
                                 for (int i = 0; i < 20; i++) {
-                                    Vector spark = new Vector((r.nextDouble()-0.5)*0.9, r.nextDouble()*0.8, (r.nextDouble()-0.5)*0.9);
+                                    Vector spark = new Vector((float)((r.nextDouble()-0.5)*0.9), (float)(r.nextDouble()*0.8), (float)((r.nextDouble()-0.5)*0.9));
                                     w.spawnParticle(Particle.DUST, targetLoc.clone().add(spark), 1, new Particle.DustOptions(DASH_ACCENT, 1.7f));
                                 }
                                 break;
@@ -243,9 +243,9 @@ public class SkillListener implements Listener {
                 float chargeProgress = (float) chargeFrame / 5f;
                 for (int i = 0; i < 8 + armorTier * 3; i++) {
                     double angle = Math.toRadians(i * 45 + chargeFrame * 20);
-                    Vector chargeOffset = new Vector(                            Math.cos(angle) * (0.5 + chargeProgress),
-                            chargeProgress * 0.6,
-                            Math.sin(angle) * (0.5 + chargeProgress)
+                    Vector chargeOffset = new Vector(                            (float)(Math.cos(angle) * (0.5 + chargeProgress)),
+                            chargeProgress * 0.6f,
+                            (float)(Math.sin(angle) * (0.5 + chargeProgress))
                     );
                     Color chargeColor = chargeFrame % 2 == 0 ? DASH_PRIMARY : DASH_SECONDARY;
                     w.spawnParticle(Particle.DUST, loc.clone().add(chargeOffset), 1, new Particle.DustOptions(chargeColor, 1.3f + chargeProgress));
@@ -255,9 +255,9 @@ public class SkillListener implements Listener {
                 if (chargeFrame % 2 == 0) {
                     for (int crack = 0; crack < 5 + armorTier * 2; crack++) {
                         Vector crackOffset = new Vector(
-                                (r.nextDouble()-0.5) * 1.2,
-                                r.nextDouble() * 0.9,
-                                (r.nextDouble()-0.5) * 1.2
+                                (float)((r.nextDouble()-0.5) * 1.2),
+                                (float)(r.nextDouble() * 0.9),
+                                (float)((r.nextDouble()-0.5) * 1.2)
                         );
                         w.spawnParticle(Particle.DUST, loc.clone().add(crackOffset), 1, new Particle.DustOptions(DASH_ACCENT, 1.5f));
                     }
@@ -315,13 +315,13 @@ public class SkillListener implements Listener {
                         if (armorTier >= 1 && life <= range / speed + 15) {
                             float returnProgress = (float) (life - range/speed) / 15f;
                             for (int i = 0; i < 5; i++) {
-                                Vector returnOffset = projDir.clone().multiply(-0.4 * returnProgress);
+                                Vector returnOffset = projDir.clone().multiply(-0.4f * returnProgress);
                                 Location leafLoc = start.clone().add(returnOffset);
-                                leafLoc.add(0, Math.sin(returnProgress * Math.PI) * 0.5, 0);
+                                leafLoc.add(0, (float)(Math.sin(returnProgress * Math.PI) * 0.5), 0);
                                 
                                 float alpha = 1.0f - returnProgress;
                                 w.spawnParticle(Particle.DUST, leafLoc, 1, new Particle.DustOptions(CRESCENT_SECONDARY, 1.1f * alpha));
-                                w.spawnParticle(Particle.DUST, leafLoc.clone().add(0, 0.15, 0), 1, new Particle.DustOptions(CRESCENT_ACCENT, 0.9f * alpha));
+                                w.spawnParticle(Particle.DUST, leafLoc.clone().add(0, 0.15f, 0), 1, new Particle.DustOptions(CRESCENT_ACCENT, 0.9f * alpha));
                             }
                             life++;
                             return;
@@ -330,7 +330,7 @@ public class SkillListener implements Listener {
                         return;
                     }
                     
-                    Location current = start.clone().add(projDir.clone().multiply(life * speed));
+                    Location current = start.clone().add(projDir.clone().multiply((float)(life * speed)));
                     
                     // ==========================================
                     // 🎬 HOMING WITH SMOOTH CURVE
@@ -348,7 +348,7 @@ public class SkillListener implements Listener {
                         }
                         if (nearest != null) {
                             Vector toTarget = nearest.getLocation().add(0, 1, 0).toVector().subtract(current.toVector()).normalize();
-                            projDir.add(toTarget.multiply(homingStrength)).normalize();
+                            projDir.add(toTarget.multiply((float)homingStrength)).normalize();
                         }
                     }
                     
@@ -364,9 +364,9 @@ public class SkillListener implements Listener {
                         double spiralAngle = Math.toRadians(life * 25 + i * 60 + projIndex * 120);
                         double spiralRadius = 0.35 + Math.sin(life * 0.4) * 0.15;
                         Vector spiralOffset = new Vector(
-                                Math.cos(spiralAngle) * spiralRadius,
-                                Math.sin(life * 0.35 + i) * 0.35,
-                                Math.sin(spiralAngle) * spiralRadius
+                                (float)(Math.cos(spiralAngle) * spiralRadius),
+                                (float)(Math.sin(life * 0.35 + i) * 0.35),
+                                (float)(Math.sin(spiralAngle) * spiralRadius)
                         );
                         Color trailColor = i % 3 == 0 ? CRESCENT_PRIMARY : (i % 3 == 1 ? CRESCENT_SECONDARY : CRESCENT_CORE);
                         w.spawnParticle(Particle.DUST, current.clone().add(spiralOffset), 1, new Particle.DustOptions(trailColor, 1.0f + armorTier * 0.18f));
@@ -379,9 +379,9 @@ public class SkillListener implements Listener {
                         for (int leaf = 0; leaf < 3 + armorTier; leaf++) {
                             double leafAngle = Math.toRadians(leaf * 120 + life * 8);
                             Vector leafOffset = new Vector(
-                                    Math.cos(leafAngle) * 0.5,
-                                    Math.sin(life * 0.5 + leaf) * 0.4,
-                                    Math.sin(leafAngle) * 0.5
+                                    (float)(Math.cos(leafAngle) * 0.5),
+                                    (float)(Math.sin(life * 0.5 + leaf) * 0.4),
+                                    (float)(Math.sin(leafAngle) * 0.5)
                             );
                             w.spawnParticle(Particle.DUST, current.clone().add(leafOffset), 1, new Particle.DustOptions(CRESCENT_ACCENT, 0.9f));
                         }
@@ -438,13 +438,13 @@ public class SkillListener implements Listener {
             for (double angle = -2.6; angle <= 2.6; angle += 0.13) {
                 double taper = 1.0 - Math.abs(angle) / 3.0;
                 double curve = (angle * angle) * 0.45;
-                Vector arcOffset = right.clone().multiply(angle * 1.35 * taper).add(forward.clone().multiply(-curve));
-                Vector layerVec = new Vector(0, layerOffset * Math.sin(angle), 0);                
+                Vector arcOffset = right.clone().multiply((float)(angle * 1.35 * taper)).add(forward.clone().multiply((float)-curve));
+                Vector layerVec = new Vector(0, (float)(layerOffset * Math.sin(angle)), 0);                
                 Location particleLoc = center.clone().add(arcOffset).add(layerVec);
-                w.spawnParticle(Particle.DUST, particleLoc, 1, new Particle.DustOptions(mainColor, size * taper));
+                w.spawnParticle(Particle.DUST, particleLoc, 1, new Particle.DustOptions(mainColor, size * (float)taper));
                 
                 if (layer == 0 && Math.abs(angle) < 1.4) {
-                    w.spawnParticle(Particle.DUST, particleLoc, 1, new Particle.DustOptions(CRESCENT_CORE, size * 0.75f * taper));
+                    w.spawnParticle(Particle.DUST, particleLoc, 1, new Particle.DustOptions(CRESCENT_CORE, size * 0.75f * (float)taper));
                 }
             }
         }
@@ -452,7 +452,7 @@ public class SkillListener implements Listener {
         if (armorTier == 2) {
             for (double angle = -2.9; angle <= 2.9; angle += 0.4) {
                 double curve = (angle * angle) * 0.52;
-                Vector glowOffset = right.clone().multiply(angle * 1.6).add(forward.clone().multiply(-curve));
+                Vector glowOffset = right.clone().multiply((float)(angle * 1.6)).add(forward.clone().multiply((float)-curve));
                 w.spawnParticle(Particle.DUST, center.clone().add(glowOffset), 1, new Particle.DustOptions(CRESCENT_ACCENT, 1.25f * pulse));
             }
         }
@@ -470,7 +470,7 @@ public class SkillListener implements Listener {
                 // Spiral pattern zone
                 for (int i = 0; i < 12; i++) {
                     double angle = Math.toRadians(i * 30 + duration * 10);
-                    Vector offset = new Vector(Math.cos(angle) * radius, 0.18, Math.sin(angle) * radius);
+                    Vector offset = new Vector((float)(Math.cos(angle) * radius), 0.18f, (float)(Math.sin(angle) * radius));
                     Color zoneColor = duration % 12 < 6 ? CRESCENT_PRIMARY : (duration % 12 < 9 ? CRESCENT_SECONDARY : CRESCENT_CORE);
                     w.spawnParticle(Particle.DUST, center.clone().add(offset), 1, new Particle.DustOptions(zoneColor, 1.35f * (1.0f - progress * 0.3f)));
                 }
@@ -479,7 +479,7 @@ public class SkillListener implements Listener {
                 if (duration % 3 == 0) {
                     for (int i = 0; i < 5; i++) {
                         double angle = Math.toRadians(i * 72 + duration * 5);
-                        Vector riseOffset = new Vector(Math.cos(angle) * radius * 0.6, duration * 0.08, Math.sin(angle) * radius * 0.6);
+                        Vector riseOffset = new Vector((float)(Math.cos(angle) * radius * 0.6), (float)(duration * 0.08), (float)(Math.sin(angle) * radius * 0.6));
                         w.spawnParticle(Particle.DUST, center.clone().add(riseOffset), 1, new Particle.DustOptions(CRESCENT_ACCENT, 1.1f));
                     }
                 }
@@ -525,8 +525,8 @@ public class SkillListener implements Listener {
                     
                     float progress = (float) chainFrame / 12f;
                     for (int i = 0; i < 18; i++) {
-                        Location chainLoc = from.getLocation().clone().add(chainDir.clone().multiply(i * 0.35 * progress));
-                        chainLoc.add(0, Math.sin(i * 0.5 + chainFrame * 0.4) * 0.25 * progress, 0);
+                        Location chainLoc = from.getLocation().clone().add(chainDir.clone().multiply((float)(i * 0.35 * progress)));
+                        chainLoc.add(0, (float)(Math.sin(i * 0.5 + chainFrame * 0.4) * 0.25 * progress), 0);
                         Color chainColor = i % 3 == 0 ? CRESCENT_PRIMARY : (i % 3 == 1 ? CRESCENT_SECONDARY : CRESCENT_CORE);
                         w.spawnParticle(Particle.DUST, chainLoc, 1, new Particle.DustOptions(chainColor, 1.15f * progress));
                     }
@@ -585,7 +585,7 @@ public class SkillListener implements Listener {
                     double angle = Math.toRadians(i * 7.2 + t * 3);
                     double x = Math.cos(angle) * currentRadius;
                     double z = Math.sin(angle) * currentRadius;
-                    w.spawnParticle(Particle.DUST, center.clone().add(x, 0.2, z), armorTier == 2 ? 3 : 2, new Particle.DustOptions(ULT_PRIMARY, (armorTier == 2 ? 2.4f : 1.9f) * alpha));
+                    w.spawnParticle(Particle.DUST, center.clone().add((float)x, 0.2f, (float)z), armorTier == 2 ? 3 : 2, new Particle.DustOptions(ULT_PRIMARY, (armorTier == 2 ? 2.4f : 1.9f) * alpha));
                 }                
                 // Purple accent ring (counter-rotating)
                 if (armorTier >= 1) {
@@ -593,7 +593,7 @@ public class SkillListener implements Listener {
                         double angle = Math.toRadians(i * 10.3 + t * 4 + 30);
                         double x = Math.cos(angle) * currentRadius * 0.93;
                         double z = Math.sin(angle) * currentRadius * 0.93;
-                        w.spawnParticle(Particle.DUST, center.clone().add(x, 0.28, z), 1, new Particle.DustOptions(ULT_SECONDARY, 1.7f * alpha));
+                        w.spawnParticle(Particle.DUST, center.clone().add((float)x, 0.28f, (float)z), 1, new Particle.DustOptions(ULT_SECONDARY, 1.7f * alpha));
                     }
                 }
                 
@@ -601,7 +601,7 @@ public class SkillListener implements Listener {
                 if (armorTier == 2 && t % 7 == 0) {
                     for (int corner = 0; corner < 8; corner++) {
                         double angle = Math.toRadians(corner * 45 + t * 2.5);
-                        Vector cornerOffset = new Vector(Math.cos(angle) * currentRadius, 0.45, Math.sin(angle) * currentRadius);
+                        Vector cornerOffset = new Vector((float)(Math.cos(angle) * currentRadius), 0.45f, (float)(Math.sin(angle) * currentRadius));
                         float cornerPulse = 1.0f + (float)(Math.sin(t * 0.4) * 0.2);
                         w.spawnParticle(Particle.DUST, center.clone().add(cornerOffset), 6, new Particle.DustOptions(ULT_ACCENT, 2.3f * cornerPulse));
                         w.spawnParticle(Particle.DUST, center.clone().add(cornerOffset), 4, new Particle.DustOptions(ULT_PRIMARY, 1.9f * cornerPulse));
@@ -629,14 +629,14 @@ public class SkillListener implements Listener {
                 
                 // Ascend player with golden trail
                 if (liftFrame < 17) {
-                    p.setVelocity(new Vector(0, 0.35 * (1 - liftProgress), 0));
+                    p.setVelocity(new Vector(0, 0.35f * (1 - liftProgress), 0));
                     
                     if (liftFrame % 2 == 0) {
                         for (int i = 0; i < 8 + armorTier * 3; i++) {
                             double angle = Math.toRadians(i * 45 + liftFrame * 12);
                             Vector trailOffset = new Vector(
-                                    Math.cos(angle) * (0.7 - liftProgress * 0.3),                                    -liftFrame * 0.18,
-                                    Math.sin(angle) * (0.7 - liftProgress * 0.3)
+                                    (float)(Math.cos(angle) * (0.7 - liftProgress * 0.3)),                                    -liftFrame * 0.18f,
+                                    (float)(Math.sin(angle) * (0.7 - liftProgress * 0.3))
                             );
                             Color trailColor = i % 3 == 0 ? ULT_PRIMARY : (i % 3 == 1 ? ULT_ACCENT : ULT_CORE);
                             w.spawnParticle(Particle.DUST, p.getLocation().clone().add(trailOffset), 1, new Particle.DustOptions(trailColor, 1.5f * (1 - liftProgress * 0.3f)));
@@ -651,9 +651,9 @@ public class SkillListener implements Listener {
                     float moonRadius = (float) (arenaRadius * 0.7 * (0.8 + Math.sin(liftFrame * 0.3 + m) * 0.2));
                     
                     Location moonCenter = center.clone().add(
-                            Math.cos(baseAngle) * moonRadius,
+                            (float)(Math.cos(baseAngle) * moonRadius),
                             moonHeight,
-                            Math.sin(baseAngle) * moonRadius
+                            (float)(Math.sin(baseAngle) * moonRadius)
                     );
                     
                     Vector inward = center.toVector().subtract(moonCenter.toVector()).normalize();
@@ -663,7 +663,7 @@ public class SkillListener implements Listener {
                     if (armorTier == 2 && liftFrame % 5 == 0) {
                         for (int i = 0; i < 16; i++) {
                             double angle = Math.toRadians(i * 22.5 + liftFrame * 8);
-                            Vector coronaOffset = new Vector(Math.cos(angle) * 1.5, 0, Math.sin(angle) * 1.5);
+                            Vector coronaOffset = new Vector((float)(Math.cos(angle) * 1.5), 0, (float)(Math.sin(angle) * 1.5));
                             w.spawnParticle(Particle.DUST, moonCenter.clone().add(coronaOffset), 1, new Particle.DustOptions(ULT_SECONDARY, 1.45f));
                         }
                     }
@@ -693,7 +693,7 @@ public class SkillListener implements Listener {
                 for (int m = 0; m < moonCount; m++) {
                     Location targetLoc = center;
                     if (!targets.isEmpty()) {
-                        targetLoc = targets.get(m % targets.size()).getLocation().add(0, 1.7, 0);
+                        targetLoc = targets.get(m % targets.size()).getLocation().add(0, 1.7f, 0);
                     }
                     
                     double baseAngle = Math.toRadians(m * (360.0 / moonCount));
@@ -701,9 +701,9 @@ public class SkillListener implements Listener {
                     float height = 4.8f + (float) (Math.sin(pinchFrame * 0.28) * 0.7);
                     
                     Location moonLoc = center.clone().add(
-                            Math.cos(baseAngle) * currentRadius,
+                            (float)(Math.cos(baseAngle) * currentRadius),
                             height,
-                            Math.sin(baseAngle) * currentRadius
+                            (float)(Math.sin(baseAngle) * currentRadius)
                     );
                     
                     Vector toTarget = targetLoc.toVector().subtract(moonLoc.toVector()).normalize();
@@ -714,22 +714,22 @@ public class SkillListener implements Listener {
                             double baseDmg = moonMarked.containsKey(le.getUniqueId()) ? 17.0 : 10.0;
                             double dmg = baseDmg * (1.0 + armorTier * 0.22);
                             le.damage(dmg, p);
-                            le.setVelocity(new Vector(0, 0.45, 0));
+                            le.setVelocity(new Vector(0, 0.45f, 0));
                             if (dmg > 12) moonMarked.remove(le.getUniqueId());
                             
                             Color hitColor = armorTier == 2 ? ULT_ACCENT : (armorTier == 1 ? ULT_PRIMARY : ULT_SECONDARY);
-                            spawnSparkle(le.getLocation().add(0, 1.4, 0), w, hitColor, 7 + armorTier * 2);
+                            spawnSparkle(le.getLocation().add(0, 1.4f, 0), w, hitColor, 7 + armorTier * 2);
                         }
                     }
                 }
                 
                 // Arena pulse waves
                 if (pinchFrame % 6 == 0) {
-                    float pulseProgress = (float) (pinchFrame % 6) / 6f;
+                    float pulseProgress = (float) ((pinchFrame % 6) / 6f);
                     float pulseRadius = (float) (arenaRadius * 0.5 * (1.0 - easePinch * 0.6));
                     for (int i = 0; i < 40; i++) {
                         double angle = Math.toRadians(i * 9 + pinchFrame * 7);
-                        Vector pulseOffset = new Vector(Math.cos(angle) * pulseRadius, 0.15, Math.sin(angle) * pulseRadius);
+                        Vector pulseOffset = new Vector((float)(Math.cos(angle) * pulseRadius), 0.15f, (float)(Math.sin(angle) * pulseRadius));
                         Color pulseColor = i % 4 == 0 ? ULT_SECONDARY : (i % 4 == 1 ? ULT_ACCENT : (i % 4 == 2 ? ULT_PRIMARY : ULT_CORE));
                         w.spawnParticle(Particle.DUST, center.clone().add(pulseOffset), 1, new Particle.DustOptions(pulseColor, 1.55f * (1 - pulseProgress * 0.3f)));
                     }
@@ -746,7 +746,7 @@ public class SkillListener implements Listener {
         float pulse = 1.0f + (float)(Math.sin(life * 0.4) * 0.18);
         float rotation = (float) (life * 0.05);
         
-        Vector forward = new Vector(Math.cos(Math.toRadians(facingAngleDeg)), 0, Math.sin(Math.toRadians(facingAngleDeg)));
+        Vector forward = new Vector((float)Math.cos(Math.toRadians(facingAngleDeg)), 0, (float)Math.sin(Math.toRadians(facingAngleDeg)));
         Vector right = rotate(forward, 90).normalize();
         
         for (int layer = 0; layer < layers; layer++) {
@@ -755,8 +755,8 @@ public class SkillListener implements Listener {
             
             for (double angle = -2.7; angle <= 2.7; angle += 0.11) {
                 double curve = (angle * angle) * 0.58;
-                Vector arcOffset = right.clone().multiply(angle * 1.45).add(forward.clone().multiply(-curve));
-                Vector layerVec = new Vector(0, layerOffset * Math.sin(angle + rotation), 0);
+                Vector arcOffset = right.clone().multiply((float)(angle * 1.45)).add(forward.clone().multiply((float)-curve));
+                Vector layerVec = new Vector(0, (float)(layerOffset * Math.sin(angle + rotation)), 0);
                 
                 Location particleLoc = center.clone().add(arcOffset).add(layerVec);
                 w.spawnParticle(Particle.DUST, particleLoc, 1, new Particle.DustOptions(mainColor, size));
@@ -770,14 +770,14 @@ public class SkillListener implements Listener {
         if (armorTier == 2) {
             for (double angle = -3.1; angle <= 3.1; angle += 0.38) {
                 double curve = (angle * angle) * 0.65;
-                Vector coronaOffset = right.clone().multiply(angle * 1.7).add(forward.clone().multiply(-curve));
+                Vector coronaOffset = right.clone().multiply((float)(angle * 1.7)).add(forward.clone().multiply((float)-curve));
                 w.spawnParticle(Particle.DUST, center.clone().add(coronaOffset), 1, new Particle.DustOptions(ULT_SECONDARY, 1.3f * pulse));
             }
         }
     }
     
     private void performGoldenSlam(Player p, Location center, List<LivingEntity> targets, int armorTier, World w) {
-        p.setVelocity(new Vector(0, -2.0, 0));
+        p.setVelocity(new Vector(0, -2.0f, 0));
         
         w.playSound(center, Sound.BLOCK_AMETHYST_BLOCK_HIT, armorTier == 2 ? 2.0f : 1.5f, armorTier == 2 ? 0.65f : 0.85f);
         w.playSound(center, Sound.ENTITY_ENDER_DRAGON_GROWL, 0.7f, 0.75f + armorTier * 0.1f);
@@ -788,9 +788,9 @@ public class SkillListener implements Listener {
         
         for (int i = 0; i < burstCount; i++) {
             Vector spread = new Vector(
-                    (r.nextDouble() - 0.5) * (armorTier == 2 ? 6.5 : 5.5),
-                    r.nextDouble() * (armorTier == 2 ? 5.5 : 4.5),
-                    (r.nextDouble() - 0.5) * (armorTier == 2 ? 6.5 : 5.5)
+                    (float)((r.nextDouble() - 0.5) * (armorTier == 2 ? 6.5 : 5.5)),
+                    (float)(r.nextDouble() * (armorTier == 2 ? 5.5 : 4.5)),
+                    (float)((r.nextDouble() - 0.5) * (armorTier == 2 ? 6.5 : 5.5))
             );
             Color burstParticleColor = i % 6 == 0 ? ULT_SECONDARY : (i % 6 == 1 ? ULT_ACCENT : (i % 6 == 2 ? ULT_CORE : burstColor));
             w.spawnParticle(Particle.DUST, center.clone().add(spread), 1, new Particle.DustOptions(burstParticleColor, burstSize));
@@ -800,7 +800,7 @@ public class SkillListener implements Listener {
             double baseDmg = moonMarked.containsKey(le.getUniqueId()) ? 26.0 : 15.0;
             double dmg = baseDmg * (1.0 + armorTier * 0.28);
             le.damage(dmg, p);
-            le.setVelocity(new Vector(0, -0.75, 0));
+            le.setVelocity(new Vector(0, -0.75f, 0));
             spawnSparkle(le.getLocation().add(0, 1, 0), w, armorTier == 2 ? ULT_ACCENT : ULT_PRIMARY, 12 + armorTier * 3);
         }
         
@@ -832,9 +832,9 @@ public class SkillListener implements Listener {
                 
                 for (int i = 0; i < 16 + armorTier * 6; i++) {
                     double angle = Math.toRadians(i * (360.0 / (16 + armorTier * 6)) + finaleFrame * 11);                    Vector offset = new Vector(
-                            Math.cos(angle) * (2.0 + easeFinale * 2.5),
-                            easeFinale * 3.5,
-                            Math.sin(angle) * (2.0 + easeFinale * 2.5)
+                            (float)(Math.cos(angle) * (2.0 + easeFinale * 2.5)),
+                            easeFinale * 3.5f,
+                            (float)(Math.sin(angle) * (2.0 + easeFinale * 2.5))
                     );
                     Color finaleColor = i % 5 == 0 ? ULT_SECONDARY : (i % 5 == 1 ? ULT_ACCENT : (i % 5 == 2 ? ULT_CORE : ULT_PRIMARY));
                     w.spawnParticle(Particle.DUST, p.getLocation().clone().add(offset), armorTier + 1, new Particle.DustOptions(finaleColor, 1.9f + armorTier * 0.45f));
@@ -846,9 +846,9 @@ public class SkillListener implements Listener {
                         new BukkitRunnable() {
                             public void run() {
                                 Vector spread = new Vector(
-                                        (r.nextDouble() - 0.5) * 5.5,
-                                        1.7 + r.nextDouble() * 3.5,
-                                        (r.nextDouble() - 0.5) * 5.5
+                                        (float)((r.nextDouble() - 0.5) * 5.5),
+                                        1.7f + (float)(r.nextDouble() * 3.5),
+                                        (float)((r.nextDouble() - 0.5) * 5.5)
                                 );
                                 w.spawnParticle(Particle.DUST, p.getLocation().clone().add(spread), 1, new Particle.DustOptions(ULT_ACCENT, 2.0f));
                             }
@@ -880,7 +880,7 @@ public class SkillListener implements Listener {
                 if (time > 140 || !target.isValid() || !moonMarked.containsKey(target.getUniqueId())) {
                     moonMarked.remove(target.getUniqueId());
                     cancel(); return;
-                }                Location head = target.getLocation().add(0, 2.8, 0);
+                }                Location head = target.getLocation().add(0, 2.8f, 0);
                 float pulse = 1.0f + (float)(Math.sin(time * 0.3) * 0.2);
                 target.getWorld().spawnParticle(Particle.DUST, head, 5, new Particle.DustOptions(ULT_PRIMARY, 1.8f * pulse));
                 time += 2;
@@ -914,7 +914,7 @@ public class SkillListener implements Listener {
     // ==========================================
     private void spawnSparkle(Location loc, World w, Color color, int count) {
         for (int i = 0; i < count; i++) {
-            Vector spread = new Vector((r.nextDouble() - 0.5) * 0.65, r.nextDouble() * 0.75, (r.nextDouble() - 0.5) * 0.65);
+            Vector spread = new Vector((float)((r.nextDouble() - 0.5) * 0.65), (float)(r.nextDouble() * 0.75), (float)((r.nextDouble() - 0.5) * 0.65));
             w.spawnParticle(Particle.DUST, loc.clone().add(spread), 1, new Particle.DustOptions(color, 1.45f));
         }
     }
@@ -925,7 +925,7 @@ public class SkillListener implements Listener {
         double sin = Math.sin(angle);
         double x = v.getX() * cos + v.getZ() * sin;
         double z = v.getX() * -sin + v.getZ() * cos;
-        return new Vector(x, v.getY(), z);
+        return new Vector((float)x, v.getY(), (float)z);
     }
 
     private boolean isHoldingSword(Player p) {
@@ -944,4 +944,4 @@ public class SkillListener implements Listener {
     private static class PlayerData {
         long lastSlash = 0, lastDash = 0, lastUlt = 0;
     }
-                                                             }
+                        }
