@@ -139,17 +139,15 @@ public class SkillListener implements Listener {
         p.teleport(gl.clone().add(0,2,0));
         p.setFallDistance(0);
         
-        // Sound
         w.playSound(gl,Sound.ENTITY_GENERIC_EXPLODE,1.3f,0.85f);
         w.playSound(gl,Sound.BLOCK_STONE_BREAK,1.1f,1f);
         w.playSound(gl,Sound.ENTITY_ENDER_DRAGON_GROWL,0.8f,0.9f);
         
-        // Critical hit streaks (vertical)
-        for (int i=0;i<50;i++) {            Vector sp = new Vector((float)((r.nextDouble()-0.5)*3.5),(float)(r.nextDouble()*5),(float)((r.nextDouble()-0.5)*3.5));
+        for (int i=0;i<50;i++) {            
+            Vector sp = new Vector((float)((r.nextDouble()-0.5)*3.5),(float)(r.nextDouble()*5),(float)((r.nextDouble()-0.5)*3.5));
             w.spawnParticle(Particle.CRIT,gl.clone().add(sp),1);
         }
         
-        // Star particles with trail
         for (int i=0;i<35;i++) {
             final int fi=i;
             new BukkitRunnable() {
@@ -164,7 +162,6 @@ public class SkillListener implements Listener {
             }.runTaskTimer(plugin,fi,1);
         }
         
-        // Cloud break - yellow/white fog explosion
         for (int i=0;i<80;i++) {
             double angle = Math.toRadians(i*4.5);
             float speed = 0.4f+(float)(r.nextDouble()*0.5f);
@@ -180,7 +177,6 @@ public class SkillListener implements Listener {
             }.runTaskTimer(plugin,0,1);
         }
         
-        // Block crack effect (particles only)
         for (int dx=-3;dx<=3;dx++) {
             for (int dz=-3;dz<=3;dz++) {
                 if (Math.abs(dx)+Math.abs(dz)<=4) {
@@ -191,10 +187,10 @@ public class SkillListener implements Listener {
             }
         }
         
-        // Expanding shockwave ring
         new BukkitRunnable() {
             int rf=0;
-            public void run() {                if (rf>25) { cancel(); return; }
+            public void run() {                
+                if (rf>25) { cancel(); return; }
                 final float rad = 1.5f+rf*0.35f;
                 for (int i=0;i<35;i++) {
                     double a = Math.toRadians(i*10.3+rf*6);
@@ -206,14 +202,12 @@ public class SkillListener implements Listener {
             }
         }.runTaskTimer(plugin,0,1);
         
-        // AOE damage with knockup
         for (Entity en:w.getNearbyEntities(gl,5,4,5)) {
             if (en instanceof LivingEntity && !en.equals(p)) {
                 LivingEntity le = (LivingEntity)en;
                 le.damage(18,p);
                 le.setVelocity(new Vector(0,1f,0));
                 spark(le.getLocation(),w,ELITE_C,12);
-                // Add bleeding effect
                 new BukkitRunnable() {
                     int bf=0;
                     public void run() {
@@ -243,32 +237,28 @@ public class SkillListener implements Listener {
         int t = tier(p);
         if (t==2 && hasPiece(p,EquipmentSlot.HEAD,GoldenMoon.ELITE_HELMET_KEY) && p.getHealth() < p.getAttribute(Attribute.MAX_HEALTH).getValue()*0.7) {
             e.setDamage(e.getDamage()*1.2); spark(e.getEntity().getLocation(),p.getWorld(),ELITE_A,5);
-        }        if (t>=1 && hasPiece(p,EquipmentSlot.CHEST,GoldenMoon.ARMOR_CHEST_KEY) && e.getEntity() instanceof LivingEntity && !e.getEntity().equals(p)) {
+        }        
+        if (t>=1 && hasPiece(p,EquipmentSlot.CHEST,GoldenMoon.ARMOR_CHEST_KEY) && e.getEntity() instanceof LivingEntity && !e.getEntity().equals(p)) {
             mark((LivingEntity)e.getEntity());
         }
     }
     
-    // ==========================================
-    // ⚡ SKILL 1: DASH ATTACK - HEAVILY ANIMATED
-    // ==========================================
     private void dashAttack(Player p,int t) {
         World w = p.getWorld();
         Location l = p.getLocation();
         Vector dir = l.getDirection().setY(0).normalize();
         
-        if (t==0) { // NO ARMOR: Quick slash dash
+        if (t==0) {
             new BukkitRunnable() {
                 int f=0;
                 public void run() {
                     if (f>8) {
                         Location end = l.clone().add(dir.clone().multiply(3));
                         p.teleport(end);
-                        // Slash effect at end
                         for (double a=-1;a<=1;a+=0.15) {
                             Vector slash = rotate(dir,90).multiply(a*0.8).add(dir.clone().multiply((float)(-a*a*0.4)));
                             w.spawnParticle(Particle.DUST,end.clone().add(slash),1,new Particle.DustOptions(NONE_C,1.3f));
                         }
-                        // Hit enemies
                         for (Entity en:w.getNearbyEntities(end,3,2.5,3)) {
                             if (en instanceof LivingEntity && !en.equals(p)) {
                                 ((LivingEntity)en).damage(6,p);
@@ -279,7 +269,6 @@ public class SkillListener implements Listener {
                         w.playSound(end,Sound.ENTITY_PLAYER_ATTACK_SWEEP,1f,1.3f);
                         cancel(); return;
                     }
-                    // Dash trail
                     Location dl = l.clone().add(dir.clone().multiply(f*0.4));
                     p.teleport(dl);
                     for (int i=0;i<5;i++) {
@@ -292,26 +281,21 @@ public class SkillListener implements Listener {
             }.runTaskTimer(plugin,0,1);
             showCD(p,"Dash",1500);
         }
-        else if (t==1) { // CRESCENT: Multi-slash arc            
+        else if (t==1) {
             new BukkitRunnable() {
                 int f=0;
                 public void run() {
                     if (f>15) { cancel(); return; }
                     final float pr = (float)f/15f;
-                    // Curved trajectory
                     Vector curve = dir.clone().multiply(4f*pr).setY((float)(Math.sin(pr*Math.PI)*2));
                     Location cl = l.clone().add(curve);
                     p.teleport(cl);
-                    
-                    // Crescent slash particles (multiple layers)
                     for (double a=-2;a<=2;a+=0.12) {
                         double cv = (a*a)*0.4;
                         Vector arc = rotate(dir,90).multiply(a*0.9).add(dir.clone().multiply((float)-cv));
                         Color c = f%3==0?CRESC_C:(f%3==1?Color.fromRGB(100,255,200):WHITE_C);
                         w.spawnParticle(Particle.DUST,cl.clone().add(arc),1,new Particle.DustOptions(c,1.5f));
                     }
-                    
-                    // Hit enemies along path
                     for (Entity en:w.getNearbyEntities(cl,2.5,2.5,2.5)) {
                         if (en instanceof LivingEntity && !en.equals(p)) {
                             LivingEntity le = (LivingEntity)en;
@@ -321,8 +305,6 @@ public class SkillListener implements Listener {
                             spark(le.getLocation(),w,CRESC_C,5);
                         }
                     }
-                    
-                    // Sound buildup
                     if (f%3==0) w.playSound(cl,Sound.BLOCK_AMETHYST_BLOCK_CHIME,0.4f,1.2f+f*0.05f);
                     f++;
                 }
@@ -330,19 +312,17 @@ public class SkillListener implements Listener {
             w.playSound(l,Sound.ENTITY_PLAYER_ATTACK_SWEEP,0.9f,1.4f);
             showCD(p,"Dash",1200);
         }
-        else { // ELITE: Lightning strike combo
+        else {
             new BukkitRunnable() {
                 int f=0;
                 public void run() {
                     if (f>5) {
-                        // Final devastating strike
                         Location end = l.clone().add(dir.clone().multiply(5));
                         p.teleport(end);
                         w.playSound(end,Sound.ENTITY_LIGHTNING_BOLT_THUNDER,1.2f,1.1f);
                         w.spawnParticle(Particle.FLASH,end,2);
-                        
-                        // Lightning pillars
-                        for (int i=0;i<8;i++) {                            double angle = Math.toRadians(i*45);
+                        for (int i=0;i<8;i++) {
+                            double angle = Math.toRadians(i*45);
                             Location pillar = end.clone().add((float)(Math.cos(angle)*2),0,(float)(Math.sin(angle)*2));
                             new BukkitRunnable() {
                                 int pf=0;
@@ -353,14 +333,11 @@ public class SkillListener implements Listener {
                                 }
                             }.runTaskTimer(plugin,0,1);
                         }
-                        
-                        // Massive AOE damage
                         for (Entity en:w.getNearbyEntities(end,4,3,4)) {
                             if (en instanceof LivingEntity && !en.equals(p)) {
                                 ((LivingEntity)en).damage(8,p);
                                 ((LivingEntity)en).setVelocity(dir.clone().multiply(0.7f).setY(0.6f));
                                 spark(en.getLocation(),w,ELITE_C,10);
-                                // Lightning chain
                                 new BukkitRunnable() {
                                     int lf=0;
                                     public void run() {
@@ -373,25 +350,20 @@ public class SkillListener implements Listener {
                         }
                         cancel(); return;
                     }
-                    
-                    // Multi-teleport with lightning
                     Location tl = l.clone().add(dir.clone().multiply(1+f*0.9));
                     p.teleport(tl);
                     w.spawnParticle(Particle.FLASH,tl,1);
-                    
                     for (int i=0;i<15;i++) {
                         Vector sp = new Vector((float)((r.nextDouble()-0.5)*1.4),(float)(r.nextDouble()*1.2),(float)((r.nextDouble()-0.5)*1.4));
                         Color c = i%2==0?ELITE_C:ELITE_A;
                         w.spawnParticle(Particle.DUST,tl.clone().add(sp),1,new Particle.DustOptions(c,1.7f));
                     }
-                    
-                    // Small AOE at each teleport
                     for (Entity en:w.getNearbyEntities(tl,2,2,2)) {
                         if (en instanceof LivingEntity && !en.equals(p)) {
                             ((LivingEntity)en).damage(3,p);
                             spark(en.getLocation(),w,ELITE_C,4);
                         }
-                    }                    
+                    }
                     w.playSound(tl,Sound.BLOCK_AMETHYST_BLOCK_CHIME,0.5f,1.5f+f*0.15f);
                     f++;
                 }
@@ -400,38 +372,28 @@ public class SkillListener implements Listener {
         }
     }
     
-    // ==========================================
-    // 🌙 SKILL 2: PROJECTILE ATTACK - HEAVILY ANIMATED
-    // ==========================================
     private void projectileAttack(Player p,int t) {
         World w = p.getWorld();
         Location st = p.getEyeLocation().add(p.getLocation().getDirection());
         Vector dir = p.getLocation().getDirection().normalize();
         
-        if (t==0) { // NO ARMOR: Piercing spear
+        if (t==0) {
             new BukkitRunnable() {
                 int lf=0;
                 public void run() {
                     if (lf>25) { cancel(); return; }
                     Location cur = st.clone().add(dir.clone().multiply(lf*1f));
-                    
-                    // Spear tip particles
                     w.spawnParticle(Particle.DUST,cur,4,new Particle.DustOptions(NONE_C,1.3f));
                     w.spawnParticle(Particle.DUST,cur.clone().add(dir.clone().multiply(-0.3)),2,new Particle.DustOptions(WHITE_C,1f));
-                    
-                    // Trail
                     for (int i=0;i<3;i++) {
                         Vector tsp = dir.clone().multiply(-i*0.4);
                         w.spawnParticle(Particle.DUST,cur.clone().add(tsp),1,new Particle.DustOptions(NONE_C,1f-i*0.2f));
                     }
-                    
-                    // Pierce through enemies
                     for (Entity en:w.getNearbyEntities(cur,1.5,1.5,1.5)) {
                         if (en instanceof LivingEntity && !en.equals(p)) {
                             ((LivingEntity)en).damage(5,p);
                             ((LivingEntity)en).setVelocity(dir.clone().multiply(0.6f).setY(0.3f));
                             spark(en.getLocation(),w,NONE_C,7);
-                            // Continue through (don't cancel)
                         }
                     }
                     lf++;
@@ -440,7 +402,8 @@ public class SkillListener implements Listener {
             w.playSound(st,Sound.ENTITY_ARROW_SHOOT,0.8f,1.3f);
             w.playSound(st,Sound.ENTITY_PLAYER_ATTACK_SWEEP,0.5f,1.5f);
             showCD(p,"Skill",600);
-        }        else if (t==1) { // CRESCENT: Spinning scythe
+        }
+        else if (t==1) {
             new BukkitRunnable() {
                 int lf=0; boolean ret=false;
                 LivingEntity hit=null;
@@ -449,8 +412,6 @@ public class SkillListener implements Listener {
                     float prog = ret ? (45f-lf)/22f : Math.min(1f,lf/22f);
                     if (lf==22 && hit==null) ret=true;
                     Location cur = st.clone().add(dir.clone().multiply((ret?22-lf:lf)*0.9));
-                    
-                    // Spinning scythe blade
                     for (double a=0;a<Math.PI*2;a+=0.3) {
                         double radius = 0.8 + Math.sin(lf*0.5+a)*0.3;
                         Vector blade = new Vector((float)(Math.cos(a)*radius),(float)(Math.sin(lf*0.3)*0.4),(float)(Math.sin(a)*radius));
@@ -458,10 +419,7 @@ public class SkillListener implements Listener {
                         Color c = lf%4==0?CRESC_C:(lf%4==1?Color.fromRGB(100,255,200):(lf%4==2?WHITE_C:CRESC_C));
                         w.spawnParticle(Particle.DUST,cur.clone().add(blade),1,new Particle.DustOptions(c,1.4f));
                     }
-                    
-                    // Center core
                     w.spawnParticle(Particle.DUST,cur,3,new Particle.DustOptions(CRESC_C,1.6f));
-                    
                     if (hit==null) {
                         for (Entity en:w.getNearbyEntities(cur,1.8,1.8,1.8)) {
                             if (en instanceof LivingEntity && !en.equals(p)) {
@@ -483,31 +441,28 @@ public class SkillListener implements Listener {
             w.playSound(st,Sound.BLOCK_AMETHYST_BLOCK_CHIME,0.4f,2f);
             showCD(p,"Skill",450);
         }
-        else { // ELITE: Triple dragon orbs
+        else {
             for (int orb=0;orb<3;orb++) {
                 final int oi=orb;
                 final Vector odir = rotate(dir,(orb-1)*15);
                 new BukkitRunnable() {
                     int lf=0;
-                    public void run() {                        if (lf>30) {
-                            // Dragon explosion
+                    public void run() {
+                        if (lf>30) {
                             Location end = st.clone().add(odir.clone().multiply(26));
                             w.spawnParticle(Particle.EXPLOSION,end,2);
                             w.spawnParticle(Particle.DRAGON_BREATH,end,20,0.5f,0.5f,0.5f,0.1f);
-                            
                             for (int i=0;i<40;i++) {
                                 double angle = Math.toRadians(i*9);
                                 Vector esp = new Vector((float)(Math.cos(angle)*3),(float)(r.nextDouble()*2.5),(float)(Math.sin(angle)*3));
                                 Color c = i%3==0?ELITE_C:(i%3==1?ELITE_A:WHITE_C);
                                 w.spawnParticle(Particle.DUST,end.clone().add(esp),1,new Particle.DustOptions(c,1.8f));
                             }
-                            
                             for (Entity en:w.getNearbyEntities(end,3.5,3,3.5)) {
                                 if (en instanceof LivingEntity && !en.equals(p)) {
                                     ((LivingEntity)en).damage(9,p);
                                     ((LivingEntity)en).setVelocity(new Vector(0,0.6f,0));
                                     spark(en.getLocation(),w,ELITE_C,8);
-                                    // Burning effect
                                     new BukkitRunnable() {
                                         int bf=0;
                                         public void run() {
@@ -523,10 +478,7 @@ public class SkillListener implements Listener {
                             }
                             cancel(); return;
                         }
-                        
                         Location cur = st.clone().add(odir.clone().multiply(lf*0.9f));
-                        
-                        // Homing
                         if (lf>8) {
                             LivingEntity nearest=null; double md=8;
                             for (Entity en:w.getNearbyEntities(cur,7,5,7)) {
@@ -538,20 +490,16 @@ public class SkillListener implements Listener {
                             if (nearest!=null) {
                                 Vector toT = nearest.getLocation().add(0,1,0).toVector().subtract(cur.toVector()).normalize();
                                 odir.add(toT.multiply(0.05f)).normalize();
-                            }                        }
-                        
-                        // Orb core with dragon effect
+                            }
+                        }
                         w.spawnParticle(Particle.DUST,cur,4,new Particle.DustOptions(ELITE_C,2f));
                         w.spawnParticle(Particle.DUST,cur,2,new Particle.DustOptions(ELITE_A,1.5f));
                         w.spawnParticle(Particle.DRAGON_BREATH,cur,2,0.2f,0.2f,0.2f,0.05f);
-                        
-                        // Spiral trail
                         for (int i=0;i<2;i++) {
                             double sa = Math.toRadians(lf*30+i*180);
                             Vector spiral = new Vector((float)(Math.cos(sa)*0.4),(float)(Math.sin(lf*0.4)*0.3),(float)(Math.sin(sa)*0.4));
                             w.spawnParticle(Particle.DUST,cur.clone().add(spiral),1,new Particle.DustOptions(WHITE_C,1.2f));
                         }
-                        
                         lf++;
                     }
                 }.runTaskTimer(plugin,orb*3,1);
@@ -578,7 +526,6 @@ public class SkillListener implements Listener {
                 public void run() {
                     if (cf>10) { nr.damage(4,src); spark(nr.getLocation(),w,CRESC_C,5); cancel(); return; }
                     final float pr = (float)cf/10f;
-                    // Vine chain with leaves
                     for (int i=0;i<12;i++) {
                         Location cl = from.getLocation().clone().add(cd.clone().multiply((float)(i*0.4f*pr)));
                         cl.add(0,(float)(Math.sin(i*0.5+cf*0.4)*0.25f*pr),0);
@@ -587,30 +534,24 @@ public class SkillListener implements Listener {
                         if (i%3==0) w.spawnParticle(Particle.DUST,cl.clone().add(0,0.2f,0),1,new Particle.DustOptions(WHITE_C,0.9f*pr));
                     }
                     cf++;
-                }            }.runTaskTimer(plugin,0,1);
+                }
+            }.runTaskTimer(plugin,0,1);
         }
     }
     
-    // ==========================================
-    // 🌕 SKILL 3: ULTIMATE ATTACK - HEAVILY ANIMATED
-    // ==========================================
     private void ultimateAttack(Player p,int t) {
         World w = p.getWorld();
         Location c = p.getLocation();
         
-        if (t==0) { // NO ARMOR: Explosion burst
+        if (t==0) {
             p.sendTitle("§f§l✦ MOON BURST ✦","§7Attack Mode",3,25,8);
             w.playSound(c,Sound.BLOCK_AMETHYST_BLOCK_HIT,1.1f,1.1f);
             w.playSound(c,Sound.ENTITY_GENERIC_EXPLODE,0.8f,0.9f);
-            
-            // Burst with layers
             for (int i=0;i<100;i++) {
                 Vector sp = new Vector((float)((r.nextDouble()-0.5)*5),(float)(r.nextDouble()*4),(float)((r.nextDouble()-0.5)*5));
                 Color c_layer = i%3==0?NONE_C:(i%3==1?WHITE_C:Color.fromRGB(180,180,200));
                 w.spawnParticle(Particle.DUST,c.clone().add(sp),1,new Particle.DustOptions(c_layer,1.6f));
             }
-            
-            // Expanding ring
             new BukkitRunnable() {
                 int rf=0;
                 public void run() {
@@ -624,7 +565,6 @@ public class SkillListener implements Listener {
                     rf++;
                 }
             }.runTaskTimer(plugin,0,1);
-            
             for (Entity en:w.getNearbyEntities(c,6,5,6)) {
                 if (en instanceof LivingEntity && !en.equals(p)) {
                     ((LivingEntity)en).damage(12,p);
@@ -635,16 +575,14 @@ public class SkillListener implements Listener {
             if (p.getHealth()<p.getAttribute(Attribute.MAX_HEALTH).getValue()) p.setHealth(Math.min(p.getAttribute(Attribute.MAX_HEALTH).getValue(),p.getHealth()+5));
             showCD(p,"Ultimate",12000);
         }
-        else if (t==1) { // CRESCENT: Vortex pull + slash
-            p.sendTitle("§b§l✦ CRESCENT VORTEX ✦","§aPull & Destroy",4,28,9);            w.playSound(c,Sound.BLOCK_AMETHYST_BLOCK_CHIME,1.2f,1.3f);
+        else if (t==1) {
+            p.sendTitle("§b§l✦ CRESCENT VORTEX ✦","§aPull & Destroy",4,28,9);
+            w.playSound(c,Sound.BLOCK_AMETHYST_BLOCK_CHIME,1.2f,1.3f);
             w.playSound(c,Sound.ENTITY_ENDER_DRAGON_GROWL,0.5f,0.8f);
-            
-            // Vortex particles
             new BukkitRunnable() {
                 int vf=0;
                 public void run() {
                     if (vf>35) {
-                        // Final slash explosion
                         for (Entity en:w.getNearbyEntities(c,8,6,8)) {
                             if (en instanceof LivingEntity && !en.equals(p)) {
                                 LivingEntity le = (LivingEntity)en;
@@ -654,7 +592,6 @@ public class SkillListener implements Listener {
                                 spark(le.getLocation(),w,CRESC_C,7);
                             }
                         }
-                        // Crescent explosion
                         for (int i=0;i<60;i++) {
                             double angle = Math.toRadians(i*6);
                             Vector esp = new Vector((float)(Math.cos(angle)*6),(float)(r.nextDouble()*4),(float)(Math.sin(angle)*6));
@@ -664,8 +601,6 @@ public class SkillListener implements Listener {
                     }
                     final float pr = (float)vf/35f;
                     final float rad = 3f+pr*6f;
-                    
-                    // Vortex spiral
                     for (int i=0;i<40;i++) {
                         double a = Math.toRadians(i*9+vf*8);
                         double height = Math.sin(vf*0.2+i*0.3)*2;
@@ -673,8 +608,6 @@ public class SkillListener implements Listener {
                         Color c_v = vf%4==0?CRESC_C:(vf%4==1?Color.fromRGB(100,255,200):(vf%4==2?WHITE_C:CRESC_C));
                         w.spawnParticle(Particle.DUST,c.clone().add(off),1,new Particle.DustOptions(c_v,1.5f*(1f-pr*0.3f)));
                     }
-                    
-                    // Pull enemies gradually
                     for (Entity en:w.getNearbyEntities(c,8,6,8)) {
                         if (en instanceof LivingEntity && !en.equals(p)) {
                             LivingEntity le = (LivingEntity)en;
@@ -685,10 +618,11 @@ public class SkillListener implements Listener {
                     vf++;
                 }
             }.runTaskTimer(plugin,0,1);
-            p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION,200,0,false,false));            p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,200,0,false,false));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION,200,0,false,false));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,200,0,false,false));
             showCD(p,"Ultimate",12000);
         }
-        else { // ELITE: Celestial annihilation
+        else {
             p.sendTitle("§6§l✦ GOLDEN ANNIHILATION ✦","§eDivine Punishment",5,35,10);
             w.playSound(c,Sound.BLOCK_BEACON_ACTIVATE,1.5f,0.75f);
             w.playSound(c,Sound.ENTITY_WITHER_SPAWN,0.8f,0.85f);
@@ -698,7 +632,6 @@ public class SkillListener implements Listener {
             List<LivingEntity> tg = new ArrayList<>();
             for (Entity en:w.getNearbyEntities(c,zr,6,zr)) if (en instanceof LivingEntity && !en.equals(p)) tg.add((LivingEntity)en);
             
-            // Phase 1: Golden pillar cage
             new BukkitRunnable() {
                 int pf=0;
                 public void run() {
@@ -717,30 +650,22 @@ public class SkillListener implements Listener {
                 }
             }.runTaskTimer(plugin,0,1);
             
-            // Phase 2: Orbital bombardment
             new BukkitRunnable() {
                 int bf=0;
                 public void run() {
                     if (bf>tg.size()*4) {
-                        // Phase 3: Divine explosion
                         w.playSound(c,Sound.ENTITY_GENERIC_EXPLODE,1.3f,0.75f);
                         w.playSound(c,Sound.BLOCK_END_PORTAL_SPAWN,1f,0.8f);
-                        
-                        // Massive particle explosion
                         for (int i=0;i<150;i++) {
                             Vector sp = new Vector((float)((r.nextDouble()-0.5)*8),(float)(r.nextDouble()*6),(float)((r.nextDouble()-0.5)*8));
                             Color c_exp = i%4==0?ELITE_C:(i%4==1?ELITE_A:(i%4==2?WHITE_C:Color.fromRGB(255,240,180)));
                             w.spawnParticle(Particle.DUST,c.clone().add(sp),1,new Particle.DustOptions(c_exp,2.2f));
                         }
-                        
-                        // Dragon breath cloud
-                        w.spawnParticle(Particle.DRAGON_BREATH,c,50,3f,2f,3f,0.2f);                        
-                        // Devastating damage
+                        w.spawnParticle(Particle.DRAGON_BREATH,c,50,3f,2f,3f,0.2f);
                         for (LivingEntity le:tg) {
                             le.damage(15,p);
                             le.setVelocity(new Vector(0,-0.8f,0));
                             spark(le.getLocation(),w,ELITE_C,12);
-                            // Mark for death
                             new BukkitRunnable() {
                                 int mf=0;
                                 public void run() {
@@ -753,18 +678,14 @@ public class SkillListener implements Listener {
                                 }
                             }.runTaskTimer(plugin,0,2);
                         }
-                        
-                        // Elite buffs
                         if (p.getHealth()<p.getAttribute(Attribute.MAX_HEALTH).getValue()) p.setHealth(Math.min(p.getAttribute(Attribute.MAX_HEALTH).getValue(),p.getHealth()+12));
                         p.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH,300,1,false,false));
                         p.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION,400,2,false,false));
                         p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION,200,1,false,false));
                         cancel(); return;
                     }
-                    
                     if (bf<tg.size() && !tg.isEmpty()) {
                         LivingEntity target = tg.get(bf%tg.size());
-                        // Sky beam strike
                         new BukkitRunnable() {
                             int beam=0;
                             public void run() {
@@ -783,13 +704,11 @@ public class SkillListener implements Listener {
                     }
                     bf++;
                 }
-            }.runTaskTimer(plugin,31,2);            showCD(p,"Ultimate",12000);
+            }.runTaskTimer(plugin,31,2);
+            showCD(p,"Ultimate",12000);
         }
     }
     
-    // ==========================================
-    // ✨ HELPERS
-    // ==========================================
     private void showCD(Player p,String skill,long ms) {
         final long[] sec = {ms/1000};
         new BukkitRunnable() {
@@ -832,7 +751,8 @@ public class SkillListener implements Listener {
     }
     
     private boolean hasSword(Player p) {
-        ItemStack it = p.getInventory().getItemInMainHand();        return it!=null && it.hasItemMeta() && it.getItemMeta().getPersistentDataContainer().has(GoldenMoon.SWORD_KEY,PersistentDataType.BYTE);
+        ItemStack it = p.getInventory().getItemInMainHand();        
+        return it!=null && it.hasItemMeta() && it.getItemMeta().getPersistentDataContainer().has(GoldenMoon.SWORD_KEY,PersistentDataType.BYTE);
     }
     
     private boolean hasPiece(Player p,EquipmentSlot sl,org.bukkit.NamespacedKey key) {
@@ -851,4 +771,5 @@ public class SkillListener implements Listener {
     private PD get(Player p) { return data.computeIfAbsent(p.getUniqueId(),k->new PD()); }
     
     private static class PD { long ls=0,ld=0,lu=0; }
-                }
+}
+
