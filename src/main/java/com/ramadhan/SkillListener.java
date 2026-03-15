@@ -47,7 +47,8 @@ public class SkillListener implements Listener {
     private final Random r = new Random();
     
     public SkillListener(GoldenMoon p) { plugin = p; }
-        @EventHandler public void onQ(PlayerQuitEvent e) { 
+    
+    @EventHandler public void onQ(PlayerQuitEvent e) { 
         data.remove(e.getPlayer().getUniqueId()); 
         marked.remove(e.getPlayer().getUniqueId());
     }
@@ -59,20 +60,17 @@ public class SkillListener implements Listener {
         long n = System.currentTimeMillis();
         int t = tier(p);
         
-        // SKILL 1: DASH ATTACK (Shift + Left Click)
         if (p.isSneaking() && (e.getAction()==Action.LEFT_CLICK_AIR || e.getAction()==Action.LEFT_CLICK_BLOCK)) {
             e.setCancelled(true);
             int cd = t==2?1000:(t==1?1500:2000);
             if (n-d.s1 < cd) { showCD(p,getSkillName(1,t),cd-(n-d.s1)); return; }
             skill1(p,t); d.s1 = n; return;
         }
-        // SKILL 2: PROJECTILE (Left Click)
         if (e.getAction()==Action.LEFT_CLICK_AIR || e.getAction()==Action.LEFT_CLICK_BLOCK) {
             int cd = t==2?500:(t==1?700:1000);
             if (n-d.s2 < cd) { showCD(p,getSkillName(2,t),cd-(n-d.s2)); return; }
             skill2(p,t); d.s2 = n; return;
         }
-        // SKILL 3: ULTIMATE (Right Click)
         if (e.getAction()==Action.RIGHT_CLICK_AIR || e.getAction()==Action.RIGHT_CLICK_BLOCK) {
             e.setCancelled(true);
             if (n-d.s3 < 15000) { showCD(p,getSkillName(3,t),15000-(n-d.s3)); return; }
@@ -96,7 +94,8 @@ public class SkillListener implements Listener {
     }
     
     @EventHandler public void onA(EntityDamageByEntityEvent e) {
-        if (!(e.getDamager() instanceof Player)) return;        Player p = (Player)e.getDamager();
+        if (!(e.getDamager() instanceof Player)) return;        
+        Player p = (Player)e.getDamager();
         int t = tier(p);
         if (t==2 && hasPiece(p,EquipmentSlot.HEAD,GoldenMoon.ELITE_HELMET_KEY) && p.getHealth() < p.getAttribute(Attribute.MAX_HEALTH).getValue()*0.7) {
             e.setDamage(e.getDamage()*1.25);
@@ -107,15 +106,12 @@ public class SkillListener implements Listener {
         }
     }
     
-    // ==========================================
-    // ⚡ SKILL 1: DASH ATTACK (3 VERSIONS)
-    // ==========================================
     private void skill1(Player p,int t) {
         World w = p.getWorld();
         Location l = p.getLocation();
         Vector dir = l.getDirection().setY(0).normalize();
         
-        if (t==0) { // NO ARMOR: "Shadow Step"
+        if (t==0) { 
             p.sendTitle("§f§l✦ SHADOW STEP ✦","§7Teleport & Strike",2,15,5);
             Location tl = l.clone().add(dir.clone().multiply(3));
             p.teleport(tl);
@@ -131,7 +127,7 @@ public class SkillListener implements Listener {
                 }
             }
         }
-        else if (t==1) { // CRESCENT: "Moonlight Dash"
+        else if (t==1) { 
             p.sendTitle("§b§l✦ MOONLIGHT DASH ✦","§aCurved Strike + Slow",2,15,5);
             new BukkitRunnable() {
                 int f=0;
@@ -145,7 +141,8 @@ public class SkillListener implements Listener {
                         w.spawnParticle(Particle.DUST,cl.clone().add(arc),1,new Particle.DustOptions(CRESC_C,1.5f));
                     }
                     for(Entity en:w.getNearbyEntities(cl,2.5,2.5,2.5)) {
-                        if(en instanceof LivingEntity && !en.equals(p)) {                            ((LivingEntity)en).damage(4,p);
+                        if(en instanceof LivingEntity && !en.equals(p)) {                            
+                            ((LivingEntity)en).damage(4,p);
                             ((LivingEntity)en).addPotionEffect(new PotionEffect(PotionEffectType.SLOW,40,1,false,false));
                         }
                     }
@@ -154,7 +151,7 @@ public class SkillListener implements Listener {
                 }
             }.runTaskTimer(plugin,0,1);
         }
-        else { // ELITE: "Golden Thunder"
+        else { 
             p.sendTitle("§6§l✦ GOLDEN THUNDER ✦","§eMulti-Strike + Lightning",2,15,5);
             new BukkitRunnable() {
                 int f=0;
@@ -192,14 +189,12 @@ public class SkillListener implements Listener {
         }
     }
     
-    // ==========================================
-    // 🌙 SKILL 2: PROJECTILE (3 VERSIONS)
-    // ==========================================    private void skill2(Player p,int t) {
+    private void skill2(Player p,int t) {
         World w = p.getWorld();
         Location st = p.getEyeLocation().add(p.getLocation().getDirection());
         Vector dir = p.getLocation().getDirection().normalize();
         
-        if (t==0) { // NO ARMOR: "Void Spear"
+        if (t==0) { 
             p.sendTitle("§f§l✦ VOID SPEAR ✦","§7Piercing Projectile",2,15,5);
             new BukkitRunnable() {
                 int lf=0;
@@ -218,7 +213,7 @@ public class SkillListener implements Listener {
             }.runTaskTimer(plugin,0,1);
             w.playSound(st,Sound.ENTITY_ARROW_SHOOT,0.8f,1.3f);
         }
-        else if (t==1) { // CRESCENT: "Emerald Scythe"
+        else if (t==1) { 
             p.sendTitle("§b§l✦ EMERALD SCYTHE ✦","§aSpinning + Chain",2,15,5);
             new BukkitRunnable() {
                 int lf=0;
@@ -243,9 +238,10 @@ public class SkillListener implements Listener {
                     lf++;
                 }
             }.runTaskTimer(plugin,0,1);
-            w.playSound(st,Sound.ENTITY_ARROW_SHOOT,0.7f,1.5f);            w.playSound(st,Sound.BLOCK_GRASS_BREAK,0.5f,1.8f);
+            w.playSound(st,Sound.ENTITY_ARROW_SHOOT,0.7f,1.5f);            
+            w.playSound(st,Sound.BLOCK_GRASS_BREAK,0.5f,1.8f);
         }
-        else { // ELITE: "Dragon Orbs"
+        else { 
             p.sendTitle("§6§l✦ DRAGON ORBS ✦","§eTriple Homing + Explosion",2,15,5);
             for(int orb=0;orb<3;orb++) {
                 final Vector odir = rotate(dir,(orb-1)*15);
@@ -292,7 +288,8 @@ public class SkillListener implements Listener {
     private void chain(LivingEntity from,Player src,World w) {
         LivingEntity nr=null; double md=6;
         for(Entity en:from.getWorld().getNearbyEntities(from.getLocation(),6,4,6)) {
-            if(en instanceof LivingEntity && !en.equals(src) && en!=from) {                double d=en.getLocation().distance(from.getLocation());
+            if(en instanceof LivingEntity && !en.equals(src) && en!=from) {                
+                double d=en.getLocation().distance(from.getLocation());
                 if(d<md) { md=d; nr=(LivingEntity)en; }
             }
         }
@@ -313,14 +310,11 @@ public class SkillListener implements Listener {
         }
     }
     
-    // ==========================================
-    // 🌕 SKILL 3: ULTIMATE (3 VERSIONS)
-    // ==========================================
     private void skill3(Player p,int t) {
         World w = p.getWorld();
         Location c = p.getLocation();
         
-        if (t==0) { // NO ARMOR: "Moon Burst"
+        if (t==0) { 
             p.sendTitle("§f§l✦ MOON BURST ✦","§7AOE Explosion",3,25,8);
             w.playSound(c,Sound.BLOCK_AMETHYST_BLOCK_HIT,1.2f,1.1f);
             w.playSound(c,Sound.ENTITY_GENERIC_EXPLODE,0.9f,0.9f);
@@ -338,10 +332,11 @@ public class SkillListener implements Listener {
                 p.setHealth(Math.min(p.getAttribute(Attribute.MAX_HEALTH).getValue(),p.getHealth()+6));
             }
         }
-        else if (t==1) { // CRESCENT: "Crescent Vortex"
+        else if (t==1) { 
             p.sendTitle("§b§l✦ CRESCENT VORTEX ✦","§aPull Enemies + Damage",3,25,8);
             w.playSound(c,Sound.BLOCK_AMETHYST_BLOCK_CHIME,1.3f,1.3f);
-            w.playSound(c,Sound.ENTITY_ENDER_DRAGON_GROWL,0.6f,0.8f);            new BukkitRunnable() {
+            w.playSound(c,Sound.ENTITY_ENDER_DRAGON_GROWL,0.6f,0.8f);            
+            new BukkitRunnable() {
                 int vf=0;
                 public void run() {
                     if(vf>35) {
@@ -374,7 +369,7 @@ public class SkillListener implements Listener {
             p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION,200,0,false,false));
             p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,200,0,false,false));
         }
-        else { // ELITE: "Celestial Annihilation"
+        else { 
             p.sendTitle("§6§l✦ CELESTIAL ANNIHILATION ✦","§eDivine Punishment",4,30,10);
             w.playSound(c,Sound.BLOCK_BEACON_ACTIVATE,1.6f,0.7f);
             w.playSound(c,Sound.ENTITY_WITHER_SPAWN,0.9f,0.8f);
@@ -382,7 +377,6 @@ public class SkillListener implements Listener {
             for(Entity en:w.getNearbyEntities(c,12,7,12)) {
                 if(en instanceof LivingEntity && !en.equals(p)) tg.add((LivingEntity)en);
             }
-            // Pillars
             new BukkitRunnable() {
                 int pf=0;
                 public void run() {
@@ -390,7 +384,8 @@ public class SkillListener implements Listener {
                     float pr = (float)pf/30f;
                     for(int pi=0;pi<8;pi++) {
                         double pa = Math.toRadians(pi*45+pf*2);
-                        Location pl = c.clone().add((float)(Math.cos(pa)*10),0,(float)(Math.sin(pa)*10));                        for(int h=0;h<(int)(pr*25);h++) {
+                        Location pl = c.clone().add((float)(Math.cos(pa)*10),0,(float)(Math.sin(pa)*10));                        
+                        for(int h=0;h<(int)(pr*25);h++) {
                             w.spawnParticle(Particle.DUST,pl.clone().add(0,h,0),3,new Particle.DustOptions(ELITE_C,1.9f));
                             if(pf%4==0) w.spawnParticle(Particle.DUST,pl.clone().add(0,h,0),1,new Particle.DustOptions(ELITE_A,1.5f));
                         }
@@ -398,7 +393,6 @@ public class SkillListener implements Listener {
                     pf++;
                 }
             }.runTaskTimer(plugin,0,1);
-            // Beams + Explosion
             new BukkitRunnable() {
                 int bf=0;
                 public void run() {
@@ -439,8 +433,6 @@ public class SkillListener implements Listener {
         }
     }
     
-    // ==========================================    // ✨ HELPERS
-    // ==========================================
     private String getSkillName(int skill,int t) {
         if(skill==1) return t==0?"Shadow Step":(t==1?"Moonlight Dash":"Golden Thunder");
         if(skill==2) return t==0?"Void Spear":(t==1?"Emerald Scythe":"Dragon Orbs");
@@ -488,7 +480,8 @@ public class SkillListener implements Listener {
         double z = v.getX()*-sn + v.getZ()*cs;
         return new Vector((float)x,v.getY(),(float)z);
     }
-        private boolean hasSword(Player p) {
+    
+    private boolean hasSword(Player p) {
         ItemStack it = p.getInventory().getItemInMainHand();
         return it!=null && it.hasItemMeta() && it.getItemMeta().getPersistentDataContainer().has(GoldenMoon.SWORD_KEY,PersistentDataType.BYTE);
     }
@@ -521,4 +514,5 @@ public class SkillListener implements Listener {
     private static class PD {
         long s1=0,s2=0,s3=0;
     }
-                        }
+}
+
