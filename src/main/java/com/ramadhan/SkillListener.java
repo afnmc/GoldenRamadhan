@@ -237,7 +237,7 @@ public class SkillListener implements Listener {
         if (!(e.getDamager() instanceof Player)) return;
         Player p = (Player)e.getDamager();
         int t = tier(p);
-        if (t==2 && hasPiece(p,EquipmentSlot.HEAD,GoldenMoon.ELITE_HELMET_KEY) && p.getHealth() < p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()*0.7) { // Attribute fix
+        if (t==2 && hasPiece(p,EquipmentSlot.HEAD,GoldenMoon.ELITE_HELMET_KEY) && p.getHealth() < p.getAttribute(Attribute.MAX_HEALTH).getValue()*0.7) { // Attribute fix
             e.setDamage(e.getDamage()*1.2); spark(e.getEntity().getLocation(),p.getWorld(),ELITE_A,5);
         }        
         if (t>=1 && hasPiece(p,EquipmentSlot.CHEST,GoldenMoon.ARMOR_CHEST_KEY) && e.getEntity() instanceof LivingEntity && !e.getEntity().equals(p)) {
@@ -303,7 +303,7 @@ public class SkillListener implements Listener {
                             LivingEntity le = (LivingEntity)en;
                             le.damage(4,p);
                             le.setVelocity(dir.clone().multiply(0.4f).setY(0.5f));
-                            le.addPotionEffect(new PotionEffect(PotionEffectType.SLOW,30,1,false,false));
+                            le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS,30,1,false,false));
                             spark(le.getLocation(),w,CRESC_C,5);
                         }
                     }
@@ -430,7 +430,7 @@ public class SkillListener implements Listener {
                                 mark((LivingEntity)en);
                                 spark(en.getLocation(),w,CRESC_C,8);
                                 ((LivingEntity)en).setVelocity(dir.clone().multiply(0.5f).setY(0.4f));
-                                chainAttack(en,p,w);
+                                chainAttack((LivingEntity) en,p,w);
                                 break;
                             }
                         }
@@ -574,7 +574,7 @@ public class SkillListener implements Listener {
                     spark(en.getLocation(),w,NONE_C,8);
                 }
             }
-            if (p.getHealth()<p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()) p.setHealth(Math.min(p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue(),p.getHealth()+5));
+            if (p.getHealth()<p.getAttribute(Attribute.MAX_HEALTH).getValue()) p.setHealth(Math.min(p.getAttribute(Attribute.MAX_HEALTH).getValue(),p.getHealth()+5));
             showCD(p,"Ultimate",12000);
         }
         else if (t==1) {
@@ -680,7 +680,7 @@ public class SkillListener implements Listener {
                                 }
                             }.runTaskTimer(plugin,0,2);
                         }
-                        if (p.getHealth()<p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()) p.setHealth(Math.min(p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue(),p.getHealth()+12));
+                        if (p.getHealth()<p.getAttribute(Attribute.MAX_HEALTH).getValue()) p.setHealth(Math.min(p.getAttribute(Attribute.MAX_HEALTH).getValue(),p.getHealth()+12));
                         p.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH,300,1,false,false));
                         p.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION,400,2,false,false));
                         p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION,200,1,false,false));
